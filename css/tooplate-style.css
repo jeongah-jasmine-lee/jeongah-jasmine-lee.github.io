@@ -335,11 +335,11 @@ b, strong {
 }
 
 .timeline-yr {
-  background: #474559;
+  background: #6c698a; /*#474559;*/
   border-radius: 100%;
   position: absolute;
-  width: 75px;
-  height: 75px;
+  width: 85px;
+  height: 80px;
   line-height: 75px;
   text-align: center;
 }
