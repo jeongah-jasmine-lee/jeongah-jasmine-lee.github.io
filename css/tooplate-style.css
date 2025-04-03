@@ -591,3 +591,8 @@ b, strong {
 .pdf-btn {
   margin-top: 1rem; /* Adjust value as needed */
 }
+
+.institution {
+  color: #777;  /* adjust to the shade you prefer */
+  margin-left: 0.5rem; /* optional spacing between the title and institution */
+}
