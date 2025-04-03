@@ -34,3 +34,18 @@
     $('.social-links a').tooltip();
 
 })(jQuery);
+
+// Get all "Read more" links
+document.querySelectorAll('.read-more').forEach(function(link) {
+  link.addEventListener('click', function() {
+    // Toggle the previous sibling element with class 'abstract-content'
+    var abstract = this.previousElementSibling;
+    if (abstract.style.display === "none" || abstract.style.display === "") {
+      abstract.style.display = "inline";
+      this.textContent = "Show less"; // Change link text to "Collapse"
+    } else {
+      abstract.style.display = "none";
+      this.textContent = "Read more";
+    }
+  });
+});

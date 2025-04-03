@@ -569,3 +569,25 @@ b, strong {
     vertical-align: top;
   }
 }
+
+/* Spacing between each publication entry */
+.publication {
+  margin-bottom: 2rem;
+}
+
+/* Hide the full abstract text by default */
+.abstract-content {
+  display: none;
+}
+
+/* Read more link styling */
+.read-more {
+  margin-left: 0.5rem;
+  color: #4285F4;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.pdf-btn {
+  margin-top: 1rem; /* Adjust value as needed */
+}
