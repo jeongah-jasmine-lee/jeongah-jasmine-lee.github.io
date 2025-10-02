@@ -344,14 +344,35 @@ function hideStatus(elementId) {
 }
 
 // User record structure for Google Drive saving
+// Enhanced user record structure for Google Sheets
 const userRecord = {
+  // Basic info
   timestamp: null,
-  inputSvg: null,
+  sessionId: null,
+  operationType: null, // 'conversion' or 'manipulation'
+  
+  // Input source tracking
+  inputSource: null, // 'manual' or 'example'
+  exampleType: null, // which example was selected
+  
+  // Operation details
+  manipulationType: null, // specific manipulation type
   prompt: null,
+  fullPrompt: null, // complete prompt sent to API
+  
+  // API details
   model: null,
-  result: null,
-  manipulationType: null,
-  sessionId: null
+  provider: null,
+  
+  // Results
+  success: false,
+  duration: null, // in seconds
+  resultLength: null,
+  errorMessage: null,
+  
+  // Data
+  inputSvg: null,
+  result: null
 };
 
 // Generate session ID for grouping related operations
@@ -363,22 +384,30 @@ function generateSessionId() {
 async function saveToGoogleDrive(record) {
   try {
     // You'll need to replace this with your actual Google Apps Script URL
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcVRt1Sg1_10zAY6jScp7-v_MzDY3T7jucbCkDg5yF5oE_cJw_USLlstTl2Phy3HSR/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2U5MtFbPe-6VnyDKH99d_fu9kskgVrimaNdu9HEAy4_mVvxME0jXk2Z-sOVqst3jDgg/exec';
+    
+    console.log('📊 Saving record to Google Sheets:', {
+      sessionId: record.sessionId,
+      operationType: record.operationType,
+      inputSource: record.inputSource,
+      duration: record.duration + 's',
+      success: record.success
+    });
     
     const response = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      mode: 'no-cors', // Required for cross-origin requests to Apps Script
+      mode: 'no-cors',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(record)
     });
     
-    console.log('✅ User record saved to Google Drive');
+    console.log('✅ Record saved to Google Sheets successfully');
+    console.log('📊 Check your Google Sheet for the new row');
     return true;
   } catch (error) {
-    console.warn('⚠️ Failed to save to Google Drive:', error);
-    // Don't throw error - this shouldn't break the main functionality
+    console.warn('⚠️ Failed to save to Google Sheets:', error);
     return false;
   }
 }
@@ -792,6 +821,8 @@ async function svgToPngBase64(svgString) {
 // Step 2: Convert SVG to D3
 document.getElementById('convertBtn').onclick = async () => {
   const svgCode = document.getElementById('svgInput').value.trim();
+  const exampleType = document.getElementById('exampleSelect').value;
+  
   if (!svgCode) {
     alert('Please enter SVG code first');
     return;
@@ -808,11 +839,18 @@ document.getElementById('convertBtn').onclick = async () => {
   }
   
   // Update user record for conversion
+  const startTime = Date.now();
   userRecord.timestamp = new Date().toISOString();
+  userRecord.operationType = 'conversion';
+  userRecord.inputSource = exampleType ? 'example' : 'manual';
+  userRecord.exampleType = exampleType || null;
   userRecord.inputSvg = svgCode;
-  userRecord.prompt = 'SVG to D3 conversion';
   userRecord.model = document.getElementById('modelSelect').value;
+  userRecord.provider = document.getElementById('apiProvider').value;
   userRecord.manipulationType = 'conversion';
+  userRecord.success = false;
+  userRecord.prompt = 'SVG to D3 conversion';
+  userRecord.fullPrompt = `Convert this SVG to D3 code:\n\n${svgCode}`;
   
   showStatus('convertStatus', 'Converting SVG to D3 code... It might take 5~10 minutes for Open AI models.', 'info');
   document.getElementById('convertBtn').disabled = true;
@@ -849,7 +887,6 @@ For reference, follow conventions from:
 - Observable D3 Gallery (https://observablehq.com/@d3/gallery)`;
 
     console.log('🌐 [Step 4/7] Calling API (this may take 10-30 seconds)...');
-    const startTime = Date.now();
     
     const result = await retryWithBackoff(
       () => callAPI([{
@@ -873,11 +910,16 @@ For reference, follow conventions from:
     renderInIframe(state.d3Code);
     document.getElementById('resultCode').textContent = state.d3Code;
     
+    // Update record with success info
+    userRecord.success = true;
+    userRecord.duration = elapsed;
+    userRecord.result = state.d3Code;
+    userRecord.resultLength = state.d3Code.length;
+    
     // Add to history
     addToHistory('Conversion', 'SVG → D3 Conversion', state.d3Code);
     
     // Save to Google Drive
-    userRecord.result = state.d3Code;
     showStatus('convertStatus', 'Saving record to Google Drive...', 'info');
     saveToGoogleDrive(userRecord);
     
@@ -885,6 +927,14 @@ For reference, follow conventions from:
     console.log('🎉 Conversion complete!');
     showStatus('convertStatus', 'Successfully converted to D3!', 'success');
   } catch (error) {
+    // Update record with error info
+    userRecord.success = false;
+    userRecord.duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    userRecord.errorMessage = error.message;
+    
+    // Save error record too
+    saveToGoogleDrive(userRecord);
+    
     console.error('❌ Error during conversion:', error);
     showStatus('convertStatus', `Error: ${error.message}`, 'error');
   } finally {
@@ -901,10 +951,14 @@ document.getElementById('applyManipulationBtn').onclick = async () => {
   let description = customPrompt;
   
   // Update user record for manipulation
+  const startTime = Date.now();
   userRecord.timestamp = new Date().toISOString();
+  userRecord.operationType = 'manipulation';
   userRecord.prompt = prompt || manipType;
   userRecord.model = document.getElementById('modelSelect').value;
+  userRecord.provider = document.getElementById('apiProvider').value;
   userRecord.manipulationType = manipType || 'custom';
+  userRecord.success = false;
   
   if (!prompt && manipType) {
     // Use predefined prompts
@@ -993,6 +1047,9 @@ Reference guidelines:
 
     const userMessage = `Instruction: ${prompt}\n\nModify this D3 code:\n\n${state.currentHTML}`;
     
+    // Update full prompt for record
+    userRecord.fullPrompt = userMessage;
+    
     console.log('📝 Full prompt being sent to API:');
     console.log('='.repeat(80));
     console.log('SYSTEM PROMPT:');
@@ -1002,7 +1059,6 @@ Reference guidelines:
     console.log('='.repeat(80));
 
     console.log('🌐 [Manipulation 3/5] Calling API (this may take 10-30 seconds)...');
-    const startTime = Date.now();
     
     const result = await retryWithBackoff(
       () => callAPI([{
@@ -1023,11 +1079,16 @@ Reference guidelines:
     renderInIframe(state.currentHTML);
     document.getElementById('resultCode').textContent = state.currentHTML;
     
+    // Update record with success info
+    userRecord.success = true;
+    userRecord.duration = elapsed;
+    userRecord.result = state.currentHTML;
+    userRecord.resultLength = state.currentHTML.length;
+    
     // Add to history
     addToHistory('Manipulation', description, state.currentHTML);
     
     // Save to Google Drive
-    userRecord.result = state.currentHTML;
     showStatus('manipulationStatus', 'Saving record to Google Drive...', 'info');
     saveToGoogleDrive(userRecord);
     
@@ -1035,6 +1096,14 @@ Reference guidelines:
     console.log('🎉 Manipulation complete!');
     showStatus('manipulationStatus', 'Manipulation applied successfully!', 'success');
   } catch (error) {
+    // Update record with error info
+    userRecord.success = false;
+    userRecord.duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    userRecord.errorMessage = error.message;
+    
+    // Save error record too
+    saveToGoogleDrive(userRecord);
+    
     console.error('❌ Error during manipulation:', error);
     showStatus('manipulationStatus', `Error: ${error.message}`, 'error');
   } finally {

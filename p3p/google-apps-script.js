@@ -1,70 +1,123 @@
 /**
- * Google Apps Script for saving user records to Google Drive
+ * Google Apps Script for saving user records to Google Sheets
  * 
  * Setup Instructions:
  * 1. Go to https://script.google.com/
  * 2. Create a new project
  * 3. Replace the default code with this script
- * 4. Save the project
- * 5. Deploy as web app with execute permissions for "Anyone"
- * 6. Copy the web app URL and replace YOUR_SCRIPT_ID in the HTML file
+ * 4. Create a Google Sheet and copy its ID from the URL
+ * 5. Update the SPREADSHEET_ID below
+ * 6. Deploy as web app with execute permissions for "Anyone"
  */
+
+// Replace this with your Google Sheet ID (from the URL)
+const SPREADSHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE';
 
 function doPost(e) {
   try {
-    // Parse the incoming data
     const data = JSON.parse(e.postData.contents);
     
-    // Create a folder for storing records (if it doesn't exist)
-    const folderName = 'SVG_D3_Records';
-    let folder = getOrCreateFolder(folderName);
+    // Open the spreadsheet
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = spreadsheet.getSheetByName('SVG_D3_Records');
     
-    // Create a subfolder for the session
-    const sessionFolderName = data.sessionId || 'unknown_session';
-    let sessionFolder = getOrCreateFolder(sessionFolderName, folder.getId());
+    // Create sheet if it doesn't exist
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet('SVG_D3_Records');
+      
+      // Add headers
+      const headers = [
+        'Timestamp',
+        'Session ID',
+        'Operation Type',
+        'Input Source',
+        'Example Type',
+        'Manipulation Type',
+        'Model',
+        'Provider',
+        'Duration (s)',
+        'Success',
+        'Error Message',
+        'Prompt',
+        'Input SVG Length',
+        'Result Length',
+        'Input SVG (first 500 chars)',
+        'Result (first 500 chars)'
+      ];
+      
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      
+      // Format headers
+      const headerRange = sheet.getRange(1, 1, 1, headers.length);
+      headerRange.setBackground('#4285f4');
+      headerRange.setFontColor('white');
+      headerRange.setFontWeight('bold');
+      
+      // Auto-resize columns
+      sheet.autoResizeColumns(1, headers.length);
+    }
     
-    // Save the record as a JSON file
-    const fileName = `${data.timestamp}_${data.manipulationType}.json`;
-    const fileContent = JSON.stringify(data, null, 2);
+    // Prepare row data
+    const timestamp = new Date(data.timestamp).toLocaleString('ko-KR');
+    const inputSvgPreview = data.inputSvg ? data.inputSvg.substring(0, 500) : '';
+    const resultPreview = data.result ? data.result.substring(0, 500) : '';
     
-    // Create the file
-    const file = DriveApp.createFile(fileName, fileContent, 'application/json');
+    const rowData = [
+      timestamp,
+      data.sessionId || '',
+      data.operationType || '',
+      data.inputSource || '',
+      data.exampleType || '',
+      data.manipulationType || '',
+      data.model || '',
+      data.provider || '',
+      data.duration || '',
+      data.success ? 'Yes' : 'No',
+      data.errorMessage || '',
+      data.prompt || '',
+      data.inputSvg ? data.inputSvg.length : 0,
+      data.result ? data.result.length : 0,
+      inputSvgPreview,
+      resultPreview
+    ];
     
-    // Move file to session folder
-    file.moveTo(sessionFolder);
+    // Add new row
+    sheet.appendRow(rowData);
     
-    // Return success response
+    // Auto-resize columns for new data
+    sheet.autoResizeColumns(1, rowData.length);
+    
+    // Add conditional formatting for success/failure
+    const lastRow = sheet.getLastRow();
+    const successColumn = 10; // Column J
+    const successRange = sheet.getRange(lastRow, successColumn);
+    
+    if (data.success) {
+      successRange.setBackground('#d9ead3'); // Light green
+    } else {
+      successRange.setBackground('#f4cccc'); // Light red
+    }
+    
+    // Add borders to new row
+    const newRowRange = sheet.getRange(lastRow, 1, 1, rowData.length);
+    newRowRange.setBorder(true, true, true, true, true, true);
+    
     return ContentService
-      .createTextOutput(JSON.stringify({success: true, fileId: file.getId()}))
+      .createTextOutput(JSON.stringify({
+        success: true, 
+        rowNumber: lastRow,
+        message: 'Record added to Google Sheets successfully'
+      }))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    console.error('Error saving record:', error);
+    console.error('Error saving to Google Sheets:', error);
     return ContentService
-      .createTextOutput(JSON.stringify({success: false, error: error.toString()}))
+      .createTextOutput(JSON.stringify({
+        success: false, 
+        error: error.toString()
+      }))
       .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function getOrCreateFolder(folderName, parentFolderId = null) {
-  let folders;
-  
-  if (parentFolderId) {
-    const parentFolder = DriveApp.getFolderById(parentFolderId);
-    folders = parentFolder.getFoldersByName(folderName);
-  } else {
-    folders = DriveApp.getFoldersByName(folderName);
-  }
-  
-  if (folders.hasNext()) {
-    return folders.next();
-  } else {
-    if (parentFolderId) {
-      const parentFolder = DriveApp.getFolderById(parentFolderId);
-      return parentFolder.createFolder(folderName);
-    } else {
-      return DriveApp.createFolder(folderName);
-    }
   }
 }
 
