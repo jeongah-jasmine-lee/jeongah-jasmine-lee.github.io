@@ -434,7 +434,12 @@ async function retryWithBackoff(apiCallFn, maxRetries = 3, baseDelay = 1000, sta
       
       // Success - save success record
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      await saveRetryRecord(operationType, originalParams, attempt, true, elapsed, result, null);
+      const actualPrompt = attempt === 1 ? 
+        (operationType === 'conversion' ? 
+          `Convert this SVG to D3 code:\n\n${originalParams?.svgCode || ''}` : 
+          `Instruction: ${originalParams?.userInstruction || ''}\n\nModify this D3 code:\n\n${originalParams?.originalD3Code || ''}`) :
+        createEnhancedPrompt(previousError, previousResult, operationType, originalParams);
+      await saveRetryRecord(operationType, originalParams, attempt, true, elapsed, result, null, actualPrompt);
       
       return result;
     } catch (error) {
@@ -453,7 +458,12 @@ async function retryWithBackoff(apiCallFn, maxRetries = 3, baseDelay = 1000, sta
       
       // Save failure record for this attempt
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      await saveRetryRecord(operationType, originalParams, attempt, false, elapsed, null, error.message);
+      const actualPrompt = attempt === 1 ? 
+        (operationType === 'conversion' ? 
+          `Convert this SVG to D3 code:\n\n${originalParams?.svgCode || ''}` : 
+          `Instruction: ${originalParams?.userInstruction || ''}\n\nModify this D3 code:\n\n${originalParams?.originalD3Code || ''}`) :
+        createEnhancedPrompt(previousError, previousResult, operationType, originalParams);
+      await saveRetryRecord(operationType, originalParams, attempt, false, elapsed, null, error.message, actualPrompt);
       
       if (statusElementId) {
         const retryMessage = attempt < maxRetries 
@@ -473,7 +483,7 @@ async function retryWithBackoff(apiCallFn, maxRetries = 3, baseDelay = 1000, sta
 }
 
 // Save retry attempt record to Google Sheets
-async function saveRetryRecord(operationType, originalParams, attemptNumber, success, duration, result, errorMessage) {
+async function saveRetryRecord(operationType, originalParams, attemptNumber, success, duration, result, errorMessage, actualPrompt = null) {
   try {
     // Create a retry-specific record
     const retryRecord = {
@@ -488,7 +498,7 @@ async function saveRetryRecord(operationType, originalParams, attemptNumber, suc
       duration: duration,
       success: success,
       errorMessage: errorMessage || '',
-      prompt: operationType === 'conversion' ? 'SVG to D3 conversion' : (userRecord.prompt || 'D3 manipulation'),
+      prompt: actualPrompt || (operationType === 'conversion' ? 'SVG to D3 conversion' : (userRecord.prompt || 'D3 manipulation')),
       inputSvg: originalParams?.svgCode || userRecord.inputSvg || '',
       result: result || '',
       attemptNumber: attemptNumber,
@@ -499,7 +509,8 @@ async function saveRetryRecord(operationType, originalParams, attemptNumber, suc
       success: success,
       duration: duration + 's',
       attemptNumber: attemptNumber,
-      isRetry: attemptNumber > 1
+      isRetry: attemptNumber > 1,
+      promptLength: actualPrompt ? actualPrompt.length : 0
     });
     
     await saveToGoogleDrive(retryRecord);
