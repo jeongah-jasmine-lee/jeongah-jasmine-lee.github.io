@@ -733,7 +733,7 @@ document.getElementById('convertBtn').onclick = async () => {
   console.log('📊 SVG code length:', svgCode.length, 'characters');
   
   state.svgCode = svgCode;
-  showStatus('convertStatus', 'Converting SVG to D3 code...', 'info');
+  showStatus('convertStatus', 'Converting SVG to D3 code... It might take 5~10 minutes for Open AI models.', 'info');
   document.getElementById('convertBtn').disabled = true;
   
   try {
