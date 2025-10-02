@@ -343,6 +343,74 @@ function hideStatus(elementId) {
   document.getElementById(elementId).style.display = 'none';
 }
 
+// User record structure for Google Drive saving
+const userRecord = {
+  timestamp: null,
+  inputSvg: null,
+  prompt: null,
+  model: null,
+  result: null,
+  manipulationType: null,
+  sessionId: null
+};
+
+// Generate session ID for grouping related operations
+function generateSessionId() {
+  return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Save user record to Google Drive via Apps Script
+async function saveToGoogleDrive(record) {
+  try {
+    // You'll need to replace this with your actual Google Apps Script URL
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcVRt1Sg1_10zAY6jScp7-v_MzDY3T7jucbCkDg5yF5oE_cJw_USLlstTl2Phy3HSR/exec';
+    
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors', // Required for cross-origin requests to Apps Script
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(record)
+    });
+    
+    console.log('✅ User record saved to Google Drive');
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Failed to save to Google Drive:', error);
+    // Don't throw error - this shouldn't break the main functionality
+    return false;
+  }
+}
+
+// Retry wrapper with exponential backoff
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000, statusElementId = null) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ Attempt ${attempt}/${maxRetries} failed:`, error.message);
+      
+      if (statusElementId) {
+        const retryMessage = attempt < maxRetries 
+          ? `Attempt ${attempt} failed. Retrying in ${Math.pow(2, attempt - 1)} seconds... (${maxRetries - attempt} attempts left)`
+          : `All ${maxRetries} attempts failed. Please check your API key and try again.`;
+        showStatus(statusElementId, retryMessage, 'error');
+      }
+      
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 async function callAPI(messages, systemPrompt = '', imageBase64 = null) {
   const apiKey = document.getElementById('apiKey').value.trim();
   const provider = document.getElementById('apiProvider').value;
@@ -733,6 +801,19 @@ document.getElementById('convertBtn').onclick = async () => {
   console.log('📊 SVG code length:', svgCode.length, 'characters');
   
   state.svgCode = svgCode;
+  
+  // Initialize session ID if not set
+  if (!userRecord.sessionId) {
+    userRecord.sessionId = generateSessionId();
+  }
+  
+  // Update user record for conversion
+  userRecord.timestamp = new Date().toISOString();
+  userRecord.inputSvg = svgCode;
+  userRecord.prompt = 'SVG to D3 conversion';
+  userRecord.model = document.getElementById('modelSelect').value;
+  userRecord.manipulationType = 'conversion';
+  
   showStatus('convertStatus', 'Converting SVG to D3 code... It might take 5~10 minutes for Open AI models.', 'info');
   document.getElementById('convertBtn').disabled = true;
   
@@ -770,10 +851,15 @@ For reference, follow conventions from:
     console.log('🌐 [Step 4/7] Calling API (this may take 10-30 seconds)...');
     const startTime = Date.now();
     
-    const result = await callAPI([{
-      role: 'user',
-      content: `Convert this SVG to D3 code:\n\n${svgCode}`
-    }], systemPrompt, pngBase64);
+    const result = await retryWithBackoff(
+      () => callAPI([{
+        role: 'user',
+        content: `Convert this SVG to D3 code:\n\n${svgCode}`
+      }], systemPrompt, pngBase64),
+      3, // max retries
+      2000, // base delay 2 seconds
+      'convertStatus' // status element for retry messages
+    );
     
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`✅ [Step 5/7] API response received in ${elapsed}s`);
@@ -789,6 +875,11 @@ For reference, follow conventions from:
     
     // Add to history
     addToHistory('Conversion', 'SVG → D3 Conversion', state.d3Code);
+    
+    // Save to Google Drive
+    userRecord.result = state.d3Code;
+    showStatus('convertStatus', 'Saving record to Google Drive...', 'info');
+    saveToGoogleDrive(userRecord);
     
     document.getElementById('applyManipulationBtn').disabled = false;
     console.log('🎉 Conversion complete!');
@@ -808,6 +899,12 @@ document.getElementById('applyManipulationBtn').onclick = async () => {
   
   let prompt = customPrompt;
   let description = customPrompt;
+  
+  // Update user record for manipulation
+  userRecord.timestamp = new Date().toISOString();
+  userRecord.prompt = prompt || manipType;
+  userRecord.model = document.getElementById('modelSelect').value;
+  userRecord.manipulationType = manipType || 'custom';
   
   if (!prompt && manipType) {
     // Use predefined prompts
@@ -907,10 +1004,15 @@ Reference guidelines:
     console.log('🌐 [Manipulation 3/5] Calling API (this may take 10-30 seconds)...');
     const startTime = Date.now();
     
-    const result = await callAPI([{
-      role: 'user',
-      content: userMessage
-    }], systemPrompt);
+    const result = await retryWithBackoff(
+      () => callAPI([{
+        role: 'user',
+        content: userMessage
+      }], systemPrompt),
+      3, // max retries
+      2000, // base delay 2 seconds
+      'manipulationStatus' // status element for retry messages
+    );
     
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`✅ [Manipulation 4/5] API response received in ${elapsed}s`);
@@ -923,6 +1025,11 @@ Reference guidelines:
     
     // Add to history
     addToHistory('Manipulation', description, state.currentHTML);
+    
+    // Save to Google Drive
+    userRecord.result = state.currentHTML;
+    showStatus('manipulationStatus', 'Saving record to Google Drive...', 'info');
+    saveToGoogleDrive(userRecord);
     
     document.getElementById('testNextBtn').style.display = 'inline-block';
     console.log('🎉 Manipulation complete!');
