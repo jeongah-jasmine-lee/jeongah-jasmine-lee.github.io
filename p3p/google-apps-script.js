@@ -21,41 +21,42 @@ function doPost(e) {
     const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
     let sheet = spreadsheet.getSheetByName('SVG_D3_Records');
     
-    // Create sheet if it doesn't exist
+    // Define headers
+    const headers = [
+      'Timestamp',
+      'Session ID',
+      'Operation Type',
+      'Input Source',
+      'Example Type',
+      'Manipulation Type',
+      'Model',
+      'Provider',
+      'Duration (s)',
+      'Success',
+      'Error Message',
+      'Prompt',
+      'Input SVG Length',
+      'Result Length',
+      'Input SVG (full text)',
+      'Result (full text)'
+    ];
+    
+    // Create sheet if it doesn't exist, or update headers if it does
     if (!sheet) {
       sheet = spreadsheet.insertSheet('SVG_D3_Records');
-      
-      // Add headers
-      const headers = [
-        'Timestamp',
-        'Session ID',
-        'Operation Type',
-        'Input Source',
-        'Example Type',
-        'Manipulation Type',
-        'Model',
-        'Provider',
-        'Duration (s)',
-        'Success',
-        'Error Message',
-        'Prompt',
-        'Input SVG Length',
-        'Result Length',
-        'Input SVG (full text)',
-        'Result (full text)'
-      ];
-      
-      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-      
-      // Format headers
-      const headerRange = sheet.getRange(1, 1, 1, headers.length);
-      headerRange.setBackground('#4285f4');
-      headerRange.setFontColor('white');
-      headerRange.setFontWeight('bold');
-      
-      // Auto-resize columns
-      sheet.autoResizeColumns(1, headers.length);
     }
+    
+    // Always update headers to ensure they're correct
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#4285f4');
+    headerRange.setFontColor('white');
+    headerRange.setFontWeight('bold');
+    
+    // Auto-resize columns
+    sheet.autoResizeColumns(1, headers.length);
     
     // Prepare row data
     const timestamp = new Date(data.timestamp).toLocaleString('ko-KR');
