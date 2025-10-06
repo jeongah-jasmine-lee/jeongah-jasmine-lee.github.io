@@ -540,7 +540,7 @@ async function callAPIWithEnhancedPrompt(enhancedPrompt, originalParams) {
       body: JSON.stringify({
         model: selectedModel,
         temperature: 1,
-        max_completion_tokens: 2000000,
+        max_completion_tokens: 128000,
         messages: [{
           role: 'user',
           content: enhancedPrompt
@@ -776,7 +776,7 @@ async function callAPI(messages, systemPrompt = '', imageBase64 = null) {
         }],
         generationConfig: {
           temperature: 1,
-          maxOutputTokens: 2000000
+          maxOutputTokens: 128000
         }
       })
     });
