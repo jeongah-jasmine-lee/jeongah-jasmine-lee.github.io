@@ -385,7 +385,7 @@ function generateSessionId() {
 async function saveToGoogleDrive(record) {
   try {
     // You'll need to replace this with your actual Google Apps Script URL
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySZncNhOxY6797F-e3ajDCUh_PLs-eXrEFUL4zkADRvrgoDemkLV8iMklBF0BkkhDq8w/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEfvNL_9lysoI3dKA3x7EgV5sXo7L8xZ20-4QXXVsKr2GIdhI-G5ozmOPiEXL4lLqINw/exec';
     
     console.log('📊 Saving record to Google Sheets:', {
       sessionId: record.sessionId,
@@ -540,7 +540,7 @@ async function callAPIWithEnhancedPrompt(enhancedPrompt, originalParams) {
       body: JSON.stringify({
         model: selectedModel,
         temperature: 1,
-        max_tokens: 2000000,
+        max_completion_tokens: 2000000,
         messages: [{
           role: 'user',
           content: enhancedPrompt
@@ -724,7 +724,7 @@ async function callAPI(messages, systemPrompt = '', imageBase64 = null) {
       body: JSON.stringify({
         model: selectedModel,
         temperature: 1,
-        max_tokens: 2000000,
+        max_completion_tokens: 2000000,
         messages: openaiMessages
       })
     });
@@ -1167,9 +1167,11 @@ Requirements:
 5. Implement margins and responsive sizing.
 6. Use D3 best practices (scales, selections, modular structure, readable variable names such as chartData instead of data).
 7. Code must be easy to modify and extend.
-8. Create a complete, self-contained HTML document using D3.js v7. You must return the full code without omitting any part in the middle.
+8. Create a complete, self-contained HTML document using D3.js v7. 
 9. The generated D3 visualization must match the attached PNG exactly (the PNG is the rendered result of the original SVG and serves as the visual ground truth).
 10. Output ONLY the HTML code, no explanations or markdown.
+
+IMPORTANT: All necessary geographic and statistical data is embedded directly within the provided SVG in <path> and <title> elements. You MUST NOT generate code that loads external files like .json or .csv. Instead, you MUST parse the 'd' attributes from the <path> elements and the data from the <title> or other text elements to reconstruct the visualization.
 
 For reference, follow conventions from:
 - D3 graph gallery (https://d3-graph-gallery.com/index.html)
