@@ -41,8 +41,8 @@ function doPost(e) {
         'Prompt',
         'Input SVG Length',
         'Result Length',
-        'Input SVG (first 500 chars)',
-        'Result (first 500 chars)'
+        'Input SVG (full text)',
+        'Result (full text)'
       ];
       
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -59,8 +59,8 @@ function doPost(e) {
     
     // Prepare row data
     const timestamp = new Date(data.timestamp).toLocaleString('ko-KR');
-    const inputSvgPreview = data.inputSvg ? data.inputSvg.substring(0, 500) : '';
-    const resultPreview = data.result ? data.result.substring(0, 500) : '';
+    const inputSvgFull = data.inputSvg || '';
+    const resultFull = data.result || '';
     
     const rowData = [
       timestamp,
@@ -77,8 +77,8 @@ function doPost(e) {
       data.prompt || '',
       data.inputSvg ? data.inputSvg.length : 0,
       data.result ? data.result.length : 0,
-      inputSvgPreview,
-      resultPreview
+      inputSvgFull,
+      resultFull
     ];
     
     // Add new row

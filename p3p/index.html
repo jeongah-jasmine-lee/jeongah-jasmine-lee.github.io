@@ -385,7 +385,7 @@ function generateSessionId() {
 async function saveToGoogleDrive(record) {
   try {
     // You'll need to replace this with your actual Google Apps Script URL
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2U5MtFbPe-6VnyDKH99d_fu9kskgVrimaNdu9HEAy4_mVvxME0jXk2Z-sOVqst3jDgg/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbySZncNhOxY6797F-e3ajDCUh_PLs-eXrEFUL4zkADRvrgoDemkLV8iMklBF0BkkhDq8w/exec';
     
     console.log('📊 Saving record to Google Sheets:', {
       sessionId: record.sessionId,
@@ -540,6 +540,7 @@ async function callAPIWithEnhancedPrompt(enhancedPrompt, originalParams) {
       body: JSON.stringify({
         model: selectedModel,
         temperature: 1,
+        max_tokens: 2000000,
         messages: [{
           role: 'user',
           content: enhancedPrompt
@@ -568,7 +569,7 @@ async function callAPIWithEnhancedPrompt(enhancedPrompt, originalParams) {
         }],
         generationConfig: {
           temperature: 1,
-          maxOutputTokens: 1000000
+          maxOutputTokens: 2000000
         }
       })
     });
@@ -723,6 +724,7 @@ async function callAPI(messages, systemPrompt = '', imageBase64 = null) {
       body: JSON.stringify({
         model: selectedModel,
         temperature: 1,
+        max_tokens: 2000000,
         messages: openaiMessages
       })
     });
@@ -774,7 +776,7 @@ async function callAPI(messages, systemPrompt = '', imageBase64 = null) {
         }],
         generationConfig: {
           temperature: 1,
-          maxOutputTokens: 1000000
+          maxOutputTokens: 2000000
         }
       })
     });
@@ -1165,7 +1167,7 @@ Requirements:
 5. Implement margins and responsive sizing.
 6. Use D3 best practices (scales, selections, modular structure, readable variable names such as chartData instead of data).
 7. Code must be easy to modify and extend.
-8. Create a complete, self-contained HTML document with D3.js v7.
+8. Create a complete, self-contained HTML document using D3.js v7. You must return the full code without omitting any part in the middle.
 9. The generated D3 visualization must match the attached PNG exactly (the PNG is the rendered result of the original SVG and serves as the visual ground truth).
 10. Output ONLY the HTML code, no explanations or markdown.
 
