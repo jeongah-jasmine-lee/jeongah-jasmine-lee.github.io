@@ -11,7 +11,7 @@
  */
 
 // Replace this with your Google Sheet ID (from the URL)
-const SPREADSHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE';
+const SPREADSHEET_ID = 'https://docs.google.com/spreadsheets/d/1l6xzMog49-WUiPBQ5adlcTwqYt1DenIFUDNXt8l37hw/edit?usp=sharing';
 
 function doPost(e) {
   try {
@@ -21,42 +21,41 @@ function doPost(e) {
     const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
     let sheet = spreadsheet.getSheetByName('SVG_D3_Records');
     
-    // Define headers
-    const headers = [
-      'Timestamp',
-      'Session ID',
-      'Operation Type',
-      'Input Source',
-      'Example Type',
-      'Manipulation Type',
-      'Model',
-      'Provider',
-      'Duration (s)',
-      'Success',
-      'Error Message',
-      'Prompt',
-      'Input SVG Length',
-      'Result Length',
-      'Input SVG (full text)',
-      'Result (full text)'
-    ];
-    
-    // Create sheet if it doesn't exist, or update headers if it does
+    // Create sheet if it doesn't exist
     if (!sheet) {
       sheet = spreadsheet.insertSheet('SVG_D3_Records');
+      
+      // Add headers
+      const headers = [
+        'Timestamp',
+        'Session ID',
+        'Operation Type',
+        'Input Source',
+        'Example Type',
+        'Manipulation Type',
+        'Model',
+        'Provider',
+        'Duration (s)',
+        'Success',
+        'Error Message',
+        'Prompt',
+        'Input SVG Length',
+        'Result Length',
+        'Input SVG (full text)',
+        'Result (full text)'
+      ];
+      
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      
+      // Format headers
+      const headerRange = sheet.getRange(1, 1, 1, headers.length);
+      headerRange.setBackground('#4285f4');
+      headerRange.setFontColor('white');
+      headerRange.setFontWeight('bold');
+      
+      // Auto-resize columns
+      sheet.autoResizeColumns(1, headers.length);
     }
-    
-    // Always update headers to ensure they're correct
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    
-    // Format headers
-    const headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setBackground('#4285f4');
-    headerRange.setFontColor('white');
-    headerRange.setFontWeight('bold');
-    
-    // Auto-resize columns
-    sheet.autoResizeColumns(1, headers.length);
     
     // Prepare row data
     const timestamp = new Date(data.timestamp).toLocaleString('ko-KR');
