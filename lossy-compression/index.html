@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SVG Lossy Compression Feasibility Tester</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 {
+      margin: 0 0 8px;
+    }
+    section { margin-bottom: 24px; }
+    img, canvas {
+      border: 1px solid #ddd;
+      margin: 10px 0;
+      max-width: 420px;
+      display: block;
+      background: #fafafa;
+    }
+    .row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .col {
+      flex: 1 1 320px;
+    }
+    label { font-size: 14px; }
+    input[type="file"] { margin-top: 4px; }
+    input[type="number"], input[type="range"] {
+      margin-top: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #18a999;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .muted {
+      font-size: 13px;
+      color: #666;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      background: #f5f5f5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    pre {
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      max-height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    table {
+      border-collapse: collapse;
+      font-size: 12px;
+      width: 100%;
+      max-width: 100%;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 4px 6px;
+      text-align: left;
+    }
+    th {
+      background: #f4f4f4;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #e0f7f4;
+      color: #0f766e;
+      margin-left: 4px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #f3e8ff;
+      color: #6b21a8;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>SVG Lossy Compression Feasibility Tester</h2>
+<p class="muted">
+  This tool runs entirely in your browser (works on GitHub Pages). It shows each pipeline step:
+  <span class="pill">A</span> text pruning,
+  <span class="pill">B</span> path simplification,
+  <span class="pill">C</span> tag pruning,
+  <span class="pill">D</span> transform flattening,
+  <span class="pill">E</span> (stub) style normalization.
+</p>
+
+<section>
+  <div class="row">
+    <div class="col">
+      <label>1. Upload SVG file</label><br>
+      <input type="file" id="svgFile" accept=".svg" />
+    </div>
+    <div class="col">
+      <label for="tolInput">
+        2. Path simplification tolerance (pixels)
+        <span class="badge">What is this?</span>
+      </label><br>
+      <input type="range" id="tolInput" min="0" max="10" step="0.5" value="2">
+      <span id="tolValue">2.0</span> px
+      <p class="muted" style="margin-top:4px;">
+        Tolerance = “how far a simplified line is allowed to deviate from the original line”, in pixels.<br>
+        • Small tolerance (0–1 px): almost identical to original, fewer points removed.<br>
+        • Medium (2–4 px): reasonable simplification, small wiggles are smoothed out.<br>
+        • Large (5+ px): aggressive compression, shape may visibly change.
+      </p>
+    </div>
+  </div>
+
+  <div style="margin-top:8px;">
+    <label>
+      <input type="checkbox" id="autoSearch" checked>
+      3. Auto-search tolerance values and show all iterations
+    </label>
+    <p class="muted">
+      When enabled, the tool will try multiple tolerance values (0 → selected max) and log
+      <em>for each run</em>: tolerance, SVG length, estimated LLM tokens, and Diff Ratio.
+      It does <strong>not</strong> stop early; it explores the full range so you can see the whole trade-off.
+    </p>
+  </div>
+
+  <button id="runBtn" onclick="runPipeline()">Run Pipeline</button>
+</section>
+
+<section>
+  <h3>Pipeline Status & Step-by-Step Log</h3>
+  <p class="muted">
+    This log shows every step that is currently running, in order: parsing, transform flattening (D),
+    tag pruning (C), text pruning (A), style normalization (E stub), path simplification (B),
+    rasterization, and pixel diff computation.
+  </p>
+  <pre id="log"></pre>
+</section>
+
+<section id="summarySection" style="display:none;">
+  <h3>SVG Length & Estimated Token Reduction</h3>
+  <p class="muted">
+    Token counts are rough estimates using <code>char_length / 4</code>. They are not exact tokenizer values,
+    but they show how much the text shrinks relative to the original.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Original (after A/C/D/E)</th>
+        <th>Compressed (chosen tolerance)</th>
+        <th>Reduction</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Characters (SVG length)</td>
+        <td id="origCharsCell">-</td>
+        <td id="compCharsCell">-</td>
+        <td id="charReductionCell">-</td>
+      </tr>
+      <tr>
+        <td>Estimated GPT tokens (~chars / 4)</td>
+        <td id="origTokensCell">-</td>
+        <td id="compTokensCell">-</td>
+        <td id="tokenReductionCell">-</td>
+      </tr>
+      <tr>
+        <td>Chosen tolerance (px)</td>
+        <td colspan="3" id="chosenToleranceCell">-</td>
+      </tr>
+      <tr>
+        <td>Diff Ratio (original vs compressed)</td>
+        <td colspan="3" id="chosenDiffCell">-</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="autoSection" style="display:none;">
+  <h3>Auto-search Iterations (Tolerance vs Diff & Length)</h3>
+  <p class="muted">
+    Each row is one run of the pipeline with a different path simplification tolerance.<br>
+    You can see how Diff Ratio and SVG length change as tolerance increases.
+  </p>
+  <table id="iterTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Tolerance (px)</th>
+        <th>Chars</th>
+        <th>Est. Tokens</th>
+        <th>Diff Ratio</th>
+        <th>Reduction (%)</th>
+      </tr>
+    </thead>
+    <tbody id="iterTableBody"></tbody>
+  </table>
+</section>
+
+<section id="results" style="display:none;">
+  <div class="row">
+    <div class="col">
+      <h3>Original (after A/C/D/E)</h3>
+      <p class="muted">
+        This image is after “safe” preprocessing: transform flattening (D) and tag pruning (C).
+        These should preserve appearance while cleaning structure.
+      </p>
+      <img id="origImg" alt="Original PNG">
+    </div>
+    <div class="col">
+      <h3>Compressed (with chosen tolerance)</h3>
+      <p class="muted">
+        This image uses the chosen path simplification tolerance (B). Ideally it should be visually
+        very close to the original while significantly reducing SVG length.
+      </p>
+      <img id="compImg" alt="Compressed PNG">
+    </div>
+  </div>
+
+  <h3>Pixel Diff Heatmap</h3>
+  <p class="muted">
+    Red pixels mark where the compressed image differs from the original (after preprocessing).
+    Diff Ratio is the fraction of pixels that differ above a threshold.
+  </p>
+  <canvas id="diffCanvas"></canvas>
+  <p id="diffRatio"></p>
+
+  <h3>Download Compressed SVG</h3>
+  <a id="downloadLink" download="compressed.svg">Download compressed.svg</a>
+</section>
+
+<section id="claudeSection" style="display:none;">
+  <h3>Next Step: Convert to D3.js via Claude (Design Stub)</h3>
+  <p class="muted">
+    When the chosen setting achieves <strong>&ge;10% length reduction</strong> and
+    <strong>Diff Ratio &le; 1%</strong>, it becomes a strong candidate to send to Claude for
+    <strong>SVG → D3.js</strong> conversion.<br><br>
+    Because GitHub Pages is static, this page <em>cannot safely call Claude directly</em>
+    (API keys would be exposed in the frontend). Instead, you would:
+  </p>
+  <ol class="muted">
+    <li>Set up a small backend (e.g., Flask / Node / Cloudflare Worker) that talks to Claude using a secret API key.</li>
+    <li>Expose an endpoint like <code>POST /convert</code> that accepts the compressed SVG and returns D3.js code.</li>
+    <li>Connect the button below to that endpoint (see the commented <code>fetch</code> stub in the JS).</li>
+    <li>Render the D3 result on this page, export as PNG, and compare PNGs with the same pixel diff method.</li>
+  </ol>
+  <button id="claudeBtn" disabled onclick="convertWithClaude()">
+    Convert compressed SVG to D3.js via Claude (stub)
+  </button>
+  <p class="muted" id="claudeStatus">
+    This button is disabled by default. It will be enabled when a “good” tolerance has been chosen
+    (Diff Ratio ≤ 1% and ≥10% length reduction). You still need to add a backend endpoint to actually call Claude.
+  </p>
+</section>
+
+
+<script>
+// =====================================================
+// Global config
+// =====================================================
+
+// Tag pruning mode:
+const TAG_PRUNE_MODE = "RENDER";
+
+// Diff threshold used for pixel-wise comparison
+const PIXEL_DIFF_THRESHOLD = 32;
+
+// "Good" candidate criteria for compression vs quality
+const MAX_GOOD_DIFF = 0.01;       // 1% pixels differ
+const MIN_GOOD_REDUCTION = 0.10;  // 10% length reduction
+
+// Placeholder for Claude backend
+const CLAUDE_BACKEND_URL = "https://your-backend.example.com/convert"; // placeholder
+
+
+// =====================================================
+// Small logging helper
+// =====================================================
+function logMessage(msg) {
+  const logEl = document.getElementById("log");
+  const time = new Date().toISOString().split("T")[1].replace("Z", "");
+  logEl.textContent += `[${time}] ${msg}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+
+// =====================================================
+// Utility: Read uploaded file as text
+// =====================================================
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+
+// =====================================================
+// A. Redundant / Duplicate Text Removal
+// =====================================================
+function removeDuplicateTexts(doc) {
+  logMessage("A. Redundant / Duplicate Text Removal: currently conservative (keeping all <text>).");
+}
+
+
+// =====================================================
+// Helper: extract all numeric values from a path "d"
+// =====================================================
+function extractNumbers(d) {
+  return (d.match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi) || []).map(Number);
+}
+
+
+// =====================================================
+// B. Path Simplification (more aggressive)
+//   - Now: allow most paths to be simplified, including filled shapes
+//   - Skip only very short paths (few coords) to avoid tiny icons
+// =====================================================
+function shouldSimplifyPath(pathEl) {
+  const d = pathEl.getAttribute("d") || "";
+  if (!d) return false;
+
+  const nums = extractNumbers(d);
+  // Require at least 8 numeric values (4 points) to be worth simplifying
+  if (nums.length < 8) return false;
+
+  return true;
+}
+
+// Convert path d => array of {x,y} by pairing numbers
+function pathToPoints(d) {
+  const nums = extractNumbers(d);
+  const pts = [];
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    pts.push({ x: nums[i], y: nums[i + 1] });
+  }
+  return pts;
+}
+
+// Rebuild simplified path as "M x y L x y ..." polyline.
+function pointsToPath(pts) {
+  if (!pts.length) return "";
+  let out = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    out += ` L ${pts[i].x} ${pts[i].y}`;
+  }
+  return out;
+}
+
+// Douglas–Peucker distance
+function perpendicularDistance(point, start, end) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (dx === 0 && dy === 0) {
+    return Math.hypot(point.x - start.x, point.y - start.y);
+  }
+  const t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy);
+  const tClamped = Math.max(0, Math.min(1, t));
+  const projX = start.x + tClamped * dx;
+  const projY = start.y + tClamped * dy;
+  return Math.hypot(point.x - projX, point.y - projY);
+}
+
+// Recursive Douglas–Peucker
+function douglasPeucker(points, epsilon) {
+  if (points.length <= 2) return points;
+  let maxDist = 0;
+  let index = 0;
+  const start = points[0];
+  const end = points[points.length - 1];
+  for (let i = 1; i < points.length - 1; i++) {
+    const d = perpendicularDistance(points[i], start, end);
+    if (d > maxDist) {
+      index = i;
+      maxDist = d;
+    }
+  }
+  if (maxDist > epsilon) {
+    const left = douglasPeucker(points.slice(0, index + 1), epsilon);
+    const right = douglasPeucker(points.slice(index), epsilon);
+    return left.slice(0, -1).concat(right);
+  } else {
+    return [start, end];
+  }
+}
+
+// Simplify all eligible paths in the document
+function simplifyAllPaths(doc, tolerancePx) {
+  const paths = [...doc.querySelectorAll("path")];
+  let simplifiedCount = 0;
+
+  paths.forEach(pathEl => {
+    if (!shouldSimplifyPath(pathEl)) return;
+    const d = pathEl.getAttribute("d");
+    const pts = pathToPoints(d);
+    if (pts.length < 3) return;
+
+    const simp = douglasPeucker(pts, tolerancePx);
+    const newD = pointsToPath(simp);
+    pathEl.setAttribute("d", newD);
+    simplifiedCount++;
+  });
+
+  logMessage(`B. Path Simplification: simplified ${simplifiedCount} path(s) with tolerance = ${tolerancePx.toFixed(2)} px.`);
+}
+
+
+// =====================================================
+// C. Tag Pruning
+// =====================================================
+function pruneDecorative(doc, mode) {
+  let removed = 0;
+
+  if (mode === "RENDER") {
+    ["title", "desc", "metadata"].forEach(tag => {
+      doc.querySelectorAll(tag).forEach(el => {
+        el.remove();
+        removed++;
+      });
+    });
+  } else if (mode === "LLM") {
+    doc.querySelectorAll("metadata").forEach(el => {
+      el.remove();
+      removed++;
+    });
+  }
+
+  logMessage(`C. Tag Pruning (${mode} mode): removed ${removed} element(s).`);
+}
+
+
+// =====================================================
+// D. Transform Flattening (group-level translate)
+// =====================================================
+function parseTranslate(transformStr) {
+  if (!transformStr) return null;
+  const match = /translate\(\s*([-\d.]+)(?:[ ,]([-\d.]+))?\s*\)/.exec(transformStr);
+  if (!match) return null;
+  const tx = parseFloat(match[1] || "0") || 0;
+  const ty = parseFloat(match[2] || "0") || 0;
+  return { tx, ty };
+}
+
+function flattenTransforms(doc) {
+  logMessage("D. Transform Flattening: pushing translate() from groups into children.");
+  let pass = 0;
+  while (true) {
+    const groups = [...doc.querySelectorAll("g[transform]")];
+    if (!groups.length) break;
+    pass++;
+
+    groups.forEach(g => {
+      const tr = parseTranslate(g.getAttribute("transform"));
+      if (!tr) return;
+      const prefix = `translate(${tr.tx},${tr.ty})`;
+
+      [...g.children].forEach(child => {
+        const existing = child.getAttribute("transform") || "";
+        const newTransform = existing ? `${prefix} ${existing}` : prefix;
+        child.setAttribute("transform", newTransform.trim());
+      });
+
+      g.removeAttribute("transform");
+    });
+
+    logMessage(`  - Flatten pass ${pass}, remaining <g transform>: ${doc.querySelectorAll("g[transform]").length}`);
+  }
+}
+
+
+// =====================================================
+// E. Style Normalization (stub)
+// =====================================================
+function normalizeStyles(doc) {
+  logMessage("E. Style Normalization: stub (no changes for now).");
+}
+
+
+// =====================================================
+// SVG → Canvas (PNG)
+// =====================================================
+function svgToCanvas(svgString) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas);
+    };
+    img.onerror = e => {
+      console.error("Error loading SVG into image", e);
+      resolve(null);
+    };
+    img.src = "data:image/svg+xml;base64," +
+      btoa(unescape(encodeURIComponent(svgString)));
+  });
+}
+
+
+// =====================================================
+// Pixel Diff
+// =====================================================
+function pixelDiff(canvasA, canvasB, threshold = PIXEL_DIFF_THRESHOLD) {
+  const w = Math.min(canvasA.width, canvasB.width);
+  const h = Math.min(canvasA.height, canvasB.height);
+
+  const ctxA = canvasA.getContext("2d");
+  const ctxB = canvasB.getContext("2d");
+  const imgA = ctxA.getImageData(0, 0, w, h);
+  const imgB = ctxB.getImageData(0, 0, w, h);
+
+  const outCanvas = document.getElementById("diffCanvas");
+  outCanvas.width = w;
+  outCanvas.height = h;
+  const outCtx = outCanvas.getContext("2d");
+  const outImg = outCtx.createImageData(w, h);
+
+  let diffCount = 0;
+  const len = w * h * 4;
+
+  for (let i = 0; i < len; i += 4) {
+    const dr = Math.abs(imgA.data[i]   - imgB.data[i]);
+    const dg = Math.abs(imgA.data[i+1] - imgB.data[i+1]);
+    const db = Math.abs(imgA.data[i+2] - imgB.data[i+2]);
+    const da = Math.abs(imgA.data[i+3] - imgB.data[i+3]);
+
+    const isDiff = dr > threshold || dg > threshold || db > threshold || da > threshold;
+
+    if (isDiff) {
+      diffCount++;
+      outImg.data[i]   = 255;
+      outImg.data[i+1] = 0;
+      outImg.data[i+2] = 0;
+      outImg.data[i+3] = 255;
+    } else {
+      outImg.data[i]   = 0;
+      outImg.data[i+1] = 0;
+      outImg.data[i+2] = 0;
+      outImg.data[i+3] = 0;
+    }
+  }
+
+  outCtx.putImageData(outImg, 0, 0);
+  return diffCount / (w * h);
+}
+
+
+// =====================================================
+// Tolerance list for auto-search
+// =====================================================
+function generateToleranceList(maxTol) {
+  const clamped = Math.min(Math.max(maxTol, 0), 10);
+  const step = 0.5;
+  const list = [];
+  for (let t = 0; t <= clamped + 1e-6; t += step) {
+    list.push(parseFloat(t.toFixed(2)));
+  }
+  if (!list.includes(parseFloat(clamped.toFixed(2)))) {
+    list.push(parseFloat(clamped.toFixed(2)));
+  }
+  return list;
+}
+
+
+// =====================================================
+// Single tolerance run
+//   - returns { tolerance, compressedSvg, canvas, charLen, tokenEst, diffRatio, reduction }
+// =====================================================
+async function runSingleTolerance(baselineSvg, baselineCharLen, origCanvas, tolerance, iterationIndex) {
+  logMessage(`--- Iteration ${iterationIndex}: Running with tolerance = ${tolerance.toFixed(2)} px ---`);
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(baselineSvg, "image/svg+xml");
+
+  simplifyAllPaths(doc, tolerance);
+
+  const serializer = new XMLSerializer();
+  const compressedSvg = serializer.serializeToString(doc.documentElement);
+  const charLen = compressedSvg.length;
+  const tokenEst = Math.ceil(charLen / 4);
+  const reduction = 1 - (charLen / baselineCharLen);
+
+  logMessage(`  - Serialized compressed SVG: ${charLen} chars (~${tokenEst} tokens), reduction ${(reduction * 100).toFixed(2)} %.`);
+  logMessage("  - Rasterizing compressed SVG to canvas...");
+  const compCanvas = await svgToCanvas(compressedSvg);
+  if (!compCanvas) {
+    logMessage("  ! Failed to rasterize compressed SVG; skipping diff for this iteration.");
+    return { tolerance, compressedSvg, canvas: null, charLen, tokenEst, diffRatio: NaN, reduction };
+  }
+
+  logMessage("  - Computing pixel diff against baseline (after A/C/D/E)...");
+  const diffRatio = pixelDiff(origCanvas, compCanvas);
+  logMessage(`  - Diff Ratio = ${diffRatio.toFixed(6)}`);
+
+  return { tolerance, compressedSvg, canvas: compCanvas, charLen, tokenEst, diffRatio, reduction };
+}
+
+
+// =====================================================
+// MAIN PIPELINE
+// =====================================================
+async function runPipeline() {
+  const fileInput = document.getElementById("svgFile");
+  const runBtn = document.getElementById("runBtn");
+  const auto = document.getElementById("autoSearch").checked;
+  const tolInput = document.getElementById("tolInput");
+  const maxTol = parseFloat(tolInput.value) || 0;
+
+  if (!fileInput.files[0]) {
+    alert("Upload an SVG first.");
+    return;
+  }
+
+  document.getElementById("log").textContent = "";
+  document.getElementById("iterTableBody").innerHTML = "";
+  document.getElementById("results").style.display = "none";
+  document.getElementById("summarySection").style.display = "none";
+  document.getElementById("autoSection").style.display = "none";
+  document.getElementById("claudeSection").style.display = "none";
+  document.getElementById("claudeBtn").disabled = true;
+  document.getElementById("claudeStatus").textContent =
+    "This button is disabled by default. It will be enabled when a “good” tolerance has been chosen (Diff Ratio ≤ 1% and ≥10% length reduction).";
+
+  runBtn.disabled = true;
+
+  try {
+    logMessage("=== Starting pipeline ===");
+    logMessage("Reading SVG file...");
+    const svgText = await readFile(fileInput.files[0]);
+
+    logMessage("Parsing SVG with DOMParser...");
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, "image/svg+xml");
+    const svgEl = doc.documentElement;
+
+    logMessage("Applying preprocessing steps A/C/D/E (without path simplification) to build baseline:");
+    flattenTransforms(doc);
+    pruneDecorative(doc, TAG_PRUNE_MODE);
+    removeDuplicateTexts(doc);
+    normalizeStyles(doc);
+
+    const serializer = new XMLSerializer();
+    const baselineSvg = serializer.serializeToString(svgEl);
+    const baselineCharLen = baselineSvg.length;
+    const baselineTokens = Math.ceil(baselineCharLen / 4);
+    logMessage(`Baseline SVG (after A/C/D/E) length: ${baselineCharLen} chars (~${baselineTokens} tokens).`);
+
+    logMessage("Rasterizing baseline SVG to canvas for reference...");
+    const origCanvas = await svgToCanvas(baselineSvg);
+    if (!origCanvas) {
+      logMessage("! Failed to rasterize baseline SVG. Aborting.");
+      alert("Could not rasterize baseline SVG. Check console for details.");
+      return;
+    }
+
+    document.getElementById("origImg").src = origCanvas.toDataURL();
+    document.getElementById("results").style.display = "block";
+
+    let iterations = [];
+    if (auto) {
+      logMessage("Auto-search is enabled. Generating tolerance list...");
+      const tolList = generateToleranceList(maxTol);
+      logMessage(`Tolerance list: [${tolList.join(", ")}]`);
+
+      document.getElementById("autoSection").style.display = "block";
+
+      let idx = 1;
+      for (const tol of tolList) {
+        const result = await runSingleTolerance(baselineSvg, baselineCharLen, origCanvas, tol, idx);
+        iterations.push(result);
+
+        const row = document.createElement("tr");
+        const diffText = isNaN(result.diffRatio) ? "N/A" : result.diffRatio.toFixed(6);
+        const redText = isNaN(result.reduction) ? "N/A" : (result.reduction * 100).toFixed(2);
+
+        row.innerHTML = `
+          <td>${idx}</td>
+          <td>${tol.toFixed(2)}</td>
+          <td>${result.charLen}</td>
+          <td>${result.tokenEst}</td>
+          <td>${diffText}</td>
+          <td>${redText}</td>
+        `;
+        document.getElementById("iterTableBody").appendChild(row);
+
+        idx++;
+      }
+
+      logMessage("Auto-search completed.");
+    } else {
+      logMessage(`Auto-search is disabled. Running single tolerance = ${maxTol.toFixed(2)} px.`);
+      const single = await runSingleTolerance(baselineSvg, baselineCharLen, origCanvas, maxTol, 1);
+      iterations.push(single);
+
+      const row = document.createElement("tr");
+      const diffText = isNaN(single.diffRatio) ? "N/A" : single.diffRatio.toFixed(6);
+      const redText = isNaN(single.reduction) ? "N/A" : (single.reduction * 100).toFixed(2);
+      row.innerHTML = `
+        <td>1</td>
+        <td>${maxTol.toFixed(2)}</td>
+        <td>${single.charLen}</td>
+        <td>${single.tokenEst}</td>
+        <td>${diffText}</td>
+        <td>${redText}</td>
+      `;
+      document.getElementById("iterTableBody").appendChild(row);
+      document.getElementById("autoSection").style.display = "block";
+    }
+
+    if (!iterations.length) {
+      logMessage("No iterations completed; aborting.");
+      return;
+    }
+
+    // --- Candidate selection logic ---
+    // 1) Prefer candidates with diff ≤ 1% and reduction ≥ 10%, pick max reduction
+    let chosen;
+    const goodCandidates = iterations.filter(r =>
+      r.canvas && !isNaN(r.diffRatio) &&
+      r.diffRatio <= MAX_GOOD_DIFF &&
+      r.reduction >= MIN_GOOD_REDUCTION
+    );
+
+    if (goodCandidates.length > 0) {
+      chosen = goodCandidates.reduce((best, curr) =>
+        curr.reduction > best.reduction ? curr : best
+      );
+      logMessage(
+        `Choosing best GOOD candidate (diff ≤ ${(MAX_GOOD_DIFF*100).toFixed(2)}%, ` +
+        `reduction ≥ ${(MIN_GOOD_REDUCTION*100).toFixed(0)}%): ` +
+        `tol=${chosen.tolerance.toFixed(2)} px, diff=${chosen.diffRatio.toFixed(6)}, ` +
+        `reduction=${(chosen.reduction*100).toFixed(2)}%.`
+      );
+    } else {
+      // 2) If none, pick candidate with ≥10% reduction and smallest diff
+      const reduced = iterations.filter(r =>
+        r.canvas && !isNaN(r.diffRatio) && r.reduction >= MIN_GOOD_REDUCTION
+      );
+      if (reduced.length > 0) {
+        chosen = reduced.reduce((best, curr) =>
+          curr.diffRatio < best.diffRatio ? curr : best
+        );
+        logMessage(
+          `No candidate met both constraints. ` +
+          `Choosing ≥10% reduction with smallest diff: tol=${chosen.tolerance.toFixed(2)} px, ` +
+          `diff=${chosen.diffRatio.toFixed(6)}, reduction=${(chosen.reduction*100).toFixed(2)}%.`
+        );
+      } else {
+        // 3) Fallback: minimum diff (original behaviour)
+        chosen = iterations.reduce((best, curr) => {
+          if (!best) return curr;
+          if (isNaN(curr.diffRatio)) return best;
+          if (isNaN(best.diffRatio)) return curr;
+          return curr.diffRatio < best.diffRatio ? curr : best;
+        }, null);
+        if (chosen) {
+          logMessage(
+            `No iteration achieved ≥10% reduction. ` +
+            `Falling back to minimum diff: tol=${chosen.tolerance.toFixed(2)} px, ` +
+            `diff=${chosen.diffRatio.toFixed(6)}, reduction=${(chosen.reduction*100).toFixed(2)}%.`
+          );
+        }
+      }
+    }
+
+    if (!chosen || !chosen.canvas) {
+      logMessage("Could not determine a valid chosen iteration. Aborting.");
+      return;
+    }
+
+    // Show compressed image & diff for chosen tolerance
+    document.getElementById("compImg").src = chosen.canvas.toDataURL();
+    const finalDiff = chosen.diffRatio;
+    document.getElementById("diffRatio").textContent =
+      "Diff Ratio (chosen tolerance): " + finalDiff.toFixed(6);
+
+    // Summary numbers
+    const origCharsCell = document.getElementById("origCharsCell");
+    const compCharsCell = document.getElementById("compCharsCell");
+    const charReductionCell = document.getElementById("charReductionCell");
+    const origTokensCell = document.getElementById("origTokensCell");
+    const compTokensCell = document.getElementById("compTokensCell");
+    const tokenReductionCell = document.getElementById("tokenReductionCell");
+    const chosenToleranceCell = document.getElementById("chosenToleranceCell");
+    const chosenDiffCell = document.getElementById("chosenDiffCell");
+
+    const compLen = chosen.charLen;
+    const compTokens = chosen.tokenEst;
+
+    const charReduction = chosen.reduction;
+    const tokenReduction = 1 - (compTokens / baselineTokens);
+
+    origCharsCell.textContent = baselineCharLen;
+    compCharsCell.textContent = compLen;
+    charReductionCell.textContent = (charReduction * 100).toFixed(2) + " %";
+
+    origTokensCell.textContent = baselineTokens;
+    compTokensCell.textContent = compTokens;
+    tokenReductionCell.textContent = (tokenReduction * 100).toFixed(2) + " %";
+
+    chosenToleranceCell.textContent = chosen.tolerance.toFixed(2) + " px";
+    chosenDiffCell.textContent = finalDiff.toFixed(6);
+
+    document.getElementById("summarySection").style.display = "block";
+
+    // Download link
+    const blob = new Blob([chosen.compressedSvg], { type: "image/svg+xml" });
+    document.getElementById("downloadLink").href = URL.createObjectURL(blob);
+
+    // Claude section
+    document.getElementById("claudeSection").style.display = "block";
+    if (charReduction >= MIN_GOOD_REDUCTION && finalDiff <= MAX_GOOD_DIFF) {
+      document.getElementById("claudeBtn").disabled = false;
+      document.getElementById("claudeStatus").textContent =
+        "Chosen candidate meets the condition (Diff Ratio ≤ 1% and ≥10% reduction). " +
+        "You can now send this compressed SVG to Claude via a backend, then compare D3-rendered PNGs with the same pixel diff method.";
+      logMessage("Chosen candidate is a GOOD compression point (quality + reduction).");
+    } else {
+      document.getElementById("claudeBtn").disabled = true;
+      document.getElementById("claudeStatus").textContent =
+        "Chosen candidate does NOT meet the target (Diff Ratio ≤ 1% and ≥10% reduction). " +
+        "You can still send it to Claude via a backend, but it may be too lossy or not compressed enough.";
+    }
+
+    logMessage("=== Pipeline complete ===");
+  } catch (err) {
+    console.error(err);
+    logMessage("! Error while running pipeline: " + String(err));
+    alert("Error while running pipeline. See console/log for details.");
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+
+// =====================================================
+// Claude integration stub (design only)
+// =====================================================
+function convertWithClaude() {
+  alert(
+    "Claude integration is not implemented in this static page.\n\n" +
+    "To use Claude safely, you need a backend endpoint (e.g., /convert)\n" +
+    "that calls Claude with your API key, then returns D3.js code.\n\n" +
+    "See the CLAUDE_BACKEND_URL constant and add a fetch() call there."
+  );
+}
+
+
+// =====================================================
+// Small UI: show current tolerance value
+// =====================================================
+document.getElementById("tolInput").addEventListener("input", (e) => {
+  document.getElementById("tolValue").textContent = parseFloat(e.target.value).toFixed(1);
+});
+document.getElementById("tolValue").textContent =
+  parseFloat(document.getElementById("tolInput").value).toFixed(1);
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SVG Lossy Compression Feasibility Tester</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    section { margin-bottom: 24px; }
+    img, canvas {
+      border: 1px solid #ddd;
+      margin: 10px 0;
+      max-width: 420px;
+      display: block;
+    }
+    #results { margin-top: 20px; }
+    #diffCanvas { display: block; }
+    .row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .col {
+      flex: 1 1 280px;
+    }
+    label { font-size: 14px; }
+    input[type="file"] { margin-top: 4px; }
+    input[type="number"], input[type="range"] {
+      margin-top: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #18a999;
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .muted {
+      font-size: 13px;
+      color: #666;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      background: #f5f5f5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>SVG Lossy Compression Feasibility Test</h2>
+<p class="muted">
+  Client-side only (works on GitHub Pages). Upload an SVG, then this tool runs:
+  <strong>A</strong> text pruning, <strong>B</strong> path simplification,
+  <strong>C</strong> tag pruning, <strong>D</strong> transform flattening,
+  <strong>E</strong> style normalization (stubbed).
+</p>
+
+<section>
+  <div>
+    <label>1. Upload SVG file</label><br>
+    <input type="file" id="svgFile" accept=".svg" />
+  </div>
+  <br>
+  <div>
+    <label for="tolInput">
+      2. Path simplification tolerance (px, Douglas–Peucker, stroke-only, no curves):
+    </label><br>
+    <input type="range" id="tolInput" min="0" max="10" step="0.5" value="2">
+    <span id="tolValue">2.0</span> px
+  </div>
+  <br>
+  <button id="runBtn" onclick="runPipeline()">Run Test</button>
+</section>
+
+<section id="results" style="display:none;">
+  <div class="row">
+    <div class="col">
+      <h3>Original</h3>
+      <img id="origImg" alt="Original PNG">
+    </div>
+    <div class="col">
+      <h3>Compressed</h3>
+      <img id="compImg" alt="Compressed PNG">
+    </div>
+  </div>
+
+  <h3>Pixel Diff Heatmap</h3>
+  <canvas id="diffCanvas"></canvas>
+  <p id="diffRatio"></p>
+
+  <h3>Download Compressed SVG</h3>
+  <a id="downloadLink" download="compressed.svg">Download compressed.svg</a>
+
+  <p class="muted">
+    A: visible <code>&lt;text&gt;</code> preserved; <code>&lt;title&gt;/&lt;desc&gt;/&lt;metadata&gt;</code> pruned (render mode).<br>
+    B: only stroke-only, non-curve paths with many points are simplified.<br>
+    C: tag pruning is currently in <code>RENDER</code> mode (can be switched to <code>LLM</code> in code).<br>
+    D: <code>translate(x,y)</code> transforms are flattened into coordinates (no more <code>transform</code> on <code>&lt;g&gt;</code>/<code>&lt;rect&gt;</code> etc).<br>
+    E: Style normalization is stubbed; for most of the 10 example SVGs, inline styles are already sufficient.
+  </p>
+</section>
+
+
+<script>
+// =====================================================
+// Global mode for tag pruning
+//   "RENDER" -> focus on display, ok to drop tooltip <title>
+//   "LLM"    -> keep semantic tags, only drop true noise
+// =====================================================
+const TAG_PRUNE_MODE = "RENDER"; // change to "LLM" if needed
+
+
+// =====================================================
+// Utility: Read uploaded file as text
+// =====================================================
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+
+// =====================================================
+// A. Redundant / Duplicate Text Removal
+//   Guideline: visible <text> should be preserved.
+//   We therefore:
+//   - DO NOT remove <text> based on duplicate content.
+//   - Focus on invisible/meta text via C (tag pruning).
+//   This function is kept as a placeholder if you want
+//   to add smarter logic later (e.g., non-visible only).
+// =====================================================
+function removeDuplicateTexts(doc) {
+  // Currently conservative: do nothing for <text>.
+  // This preserves all axis labels, tick labels, etc.
+  // If you want: you could remove <text> only when
+  // style="display:none" or opacity=0, etc.
+  // For now, we rely on C.TagPruning for <title>/<desc>.
+}
+
+
+// =====================================================
+// Helper: extract all numeric values from a path "d"
+// =====================================================
+function extractNumbers(d) {
+  return (d.match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi) || []).map(Number);
+}
+
+
+// =====================================================
+// B. Path Simplification (Douglas–Peucker, selective)
+//   - Only simplify stroke-only paths (fill is none/absent).
+//   - Skip paths containing curve/arc commands (A, C, Q, S, T).
+//   - Skip short/simple paths (few points).
+//   - Use Douglas–Peucker on polyline of (x,y) pairs.
+//   NOTE: This is deliberately conservative to avoid
+//   breaking choropleth polygons, arcs, complex icons.
+// =====================================================
+
+// Check if a path is safe to simplify according to heuristics
+function shouldSimplifyPath(pathEl) {
+  const d = pathEl.getAttribute("d") || "";
+  if (!d) return false;
+
+  // If it contains curve/arc commands, skip (C, Q, S, T, A)
+  if (/[ACQSTacqst]/.test(d)) return false;
+
+  const fill = (pathEl.getAttribute("fill") || "").trim().toLowerCase();
+  const stroke = (pathEl.getAttribute("stroke") || "").trim().toLowerCase();
+
+  // If it has a non-none fill, treat as filled region (e.g., choropleth)
+  // and skip simplification to preserve boundaries.
+  if (fill && fill !== "none") return false;
+
+  // Typical data lines: stroke present, fill none or absent.
+  // But we still require enough points to justify simplification.
+  const nums = extractNumbers(d);
+  if (nums.length < 30) return false; // too short -> skip
+
+  return true;
+}
+
+// Convert path d => array of {x,y} by pairing numbers.
+// This is approximate and assumes M/L/H/V commands are used.
+// For A/C/Q we already filtered out, so it's ok.
+function pathToPoints(d) {
+  const nums = extractNumbers(d);
+  const pts = [];
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    pts.push({ x: nums[i], y: nums[i + 1] });
+  }
+  return pts;
+}
+
+// Rebuild simplified path as "M x y L x y ..." polyline.
+// We are already skipping filled regions and curves, so it's OK
+// for data lines and axis-like shapes.
+function pointsToPath(pts) {
+  if (!pts.length) return "";
+  let out = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    out += ` L ${pts[i].x} ${pts[i].y}`;
+  }
+  return out;
+}
+
+// Douglas–Peucker distance from point P to segment AB
+function perpendicularDistance(point, start, end) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (dx === 0 && dy === 0) {
+    return Math.hypot(point.x - start.x, point.y - start.y);
+  }
+  const t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy);
+  const tClamped = Math.max(0, Math.min(1, t));
+  const projX = start.x + tClamped * dx;
+  const projY = start.y + tClamped * dy;
+  return Math.hypot(point.x - projX, point.y - projY);
+}
+
+// Recursive Douglas–Peucker
+function douglasPeucker(points, epsilon) {
+  if (points.length <= 2) return points;
+  let maxDist = 0;
+  let index = 0;
+  const start = points[0];
+  const end = points[points.length - 1];
+  for (let i = 1; i < points.length - 1; i++) {
+    const d = perpendicularDistance(points[i], start, end);
+    if (d > maxDist) {
+      index = i;
+      maxDist = d;
+    }
+  }
+  if (maxDist > epsilon) {
+    const left = douglasPeucker(points.slice(0, index + 1), epsilon);
+    const right = douglasPeucker(points.slice(index), epsilon);
+    return left.slice(0, -1).concat(right);
+  } else {
+    return [start, end];
+  }
+}
+
+// Simplify all eligible paths in the document
+function simplifyAllPaths(doc, tolerancePx) {
+  const paths = [...doc.querySelectorAll("path")];
+  let simplifiedCount = 0;
+
+  paths.forEach(pathEl => {
+    if (!shouldSimplifyPath(pathEl)) return;
+    const d = pathEl.getAttribute("d");
+    const pts = pathToPoints(d);
+    if (pts.length < 3) return;
+
+    const simp = douglasPeucker(pts, tolerancePx);
+    const newD = pointsToPath(simp);
+    pathEl.setAttribute("d", newD);
+    simplifiedCount++;
+  });
+
+  console.log(`[INFO] Simplified ${simplifiedCount} path(s).`);
+}
+
+
+// =====================================================
+// C. Tag Pruning
+//   - RENDER mode: remove <title>, <desc>, <metadata>
+//     (e.g., tooltip text in stacked_bar).
+//   - LLM mode: keep semantic tags, only drop obvious noise.
+// =====================================================
+function pruneDecorative(doc, mode) {
+  let removed = 0;
+
+  if (mode === "RENDER") {
+    ["title", "desc", "metadata"].forEach(tag => {
+      doc.querySelectorAll(tag).forEach(el => {
+        el.remove();
+        removed++;
+      });
+    });
+  } else if (mode === "LLM") {
+    // In LLM mode, we are conservative:
+    // - Keep <title>/<desc> because they contain semantic values.
+    // - Optionally drop <metadata> if it's large / irrelevant.
+    doc.querySelectorAll("metadata").forEach(el => {
+      el.remove();
+      removed++;
+    });
+  }
+
+  console.log(`[INFO] Tag pruning (${mode} mode): removed ${removed} element(s).`);
+}
+
+
+// =====================================================
+// D. Transform Flattening
+//   - We support translate(x,y) which covers 10 example SVGs.
+//   - For <g> with transform, we push translation into children.
+//   - For shapes with transform, we adjust coordinates directly.
+//   - Then we remove transform attributes.
+//   - We do multiple passes until no transform remains (for nested).
+// =====================================================
+
+// Parse "translate(x,y)" from a transform string
+function parseTranslate(transformStr) {
+  if (!transformStr) return null;
+  const match = /translate\(\s*([-\d.]+)(?:[ ,]([-\d.]+))?\s*\)/.exec(transformStr);
+  if (!match) return null;
+  const tx = parseFloat(match[1] || "0") || 0;
+  const ty = parseFloat(match[2] || "0") || 0;
+  return { tx, ty };
+}
+
+// Apply translation to a single SVG element's coordinate attributes
+function applyTranslationToElement(el, tx, ty) {
+  const tag = el.tagName.toLowerCase();
+
+  function shiftAttr(nameX, nameY) {
+    const x = parseFloat(el.getAttribute(nameX) || "0");
+    const y = parseFloat(el.getAttribute(nameY) || "0");
+    el.setAttribute(nameX, x + tx);
+    el.setAttribute(nameY, y + ty);
+  }
+
+  function shiftOne(name, isY = false) {
+    const v = parseFloat(el.getAttribute(name) || "0");
+    el.setAttribute(name, v + (isY ? ty : tx));
+  }
+
+  if (tag === "rect" || tag === "image" || tag === "text") {
+    // rect: x,y    image: x,y    text: x,y
+    const x = parseFloat(el.getAttribute("x") || "0");
+    const y = parseFloat(el.getAttribute("y") || "0");
+    el.setAttribute("x", x + tx);
+    el.setAttribute("y", y + ty);
+  } else if (tag === "line") {
+    shiftAttr("x1", "y1");
+    shiftAttr("x2", "y2");
+  } else if (tag === "circle" || tag === "ellipse") {
+    shiftAttr("cx", "cy");
+  } else if (tag === "path") {
+    // For translate, we can simply offset all coordinate pairs.
+    const d = el.getAttribute("d") || "";
+    const nums = extractNumbers(d);
+    if (nums.length === 0) return;
+    const shifted = [];
+    for (let i = 0; i < nums.length; i += 2) {
+      const x = nums[i] + tx;
+      const y = (i + 1 < nums.length) ? nums[i + 1] + ty : nums[i + 1];
+      shifted.push(x, y);
+    }
+    // We rebuild as M-L polyline (approximate). However, we only
+    // use this when transforms are present; d structure remains
+    // "close enough" for simple axes / lines. For curves, we tend
+    // to skip simplification anyway.
+    let out = "";
+    if (shifted.length >= 2) {
+      out = `M ${shifted[0]} ${shifted[1]}`;
+      for (let i = 2; i < shifted.length; i += 2) {
+        out += ` L ${shifted[i]} ${shifted[i + 1]}`;
+      }
+      el.setAttribute("d", out);
+    }
+  } else {
+    // Fallback: if element has x/y attributes, shift them.
+    if (el.hasAttribute("x")) shiftOne("x", false);
+    if (el.hasAttribute("y")) shiftOne("y", true);
+  }
+}
+
+// Flatten all translate() transforms in the SVG DOM
+function flattenTransforms(doc) {
+  let pass = 0;
+  while (true) {
+    const allTransformed = [...doc.querySelectorAll("[transform]")];
+    if (!allTransformed.length) break;
+    pass++;
+
+    allTransformed.forEach(el => {
+      const tr = parseTranslate(el.getAttribute("transform"));
+      if (!tr) return; // skip non-translate transforms
+      const { tx, ty } = tr;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === "g") {
+        // Push translation to children
+        [...el.children].forEach(child => {
+          // If child also has transform, compose by prepending translate
+          if (child.hasAttribute("transform")) {
+            const existing = child.getAttribute("transform") || "";
+            child.setAttribute("transform", `translate(${tx},${ty}) ${existing}`.trim());
+          } else {
+            applyTranslationToElement(child, tx, ty);
+          }
+        });
+        el.removeAttribute("transform");
+      } else {
+        // Shape with transform: push into its own coordinates
+        applyTranslationToElement(el, tx, ty);
+        el.removeAttribute("transform");
+      }
+    });
+
+    console.log(`[INFO] Transform flatten pass ${pass}, remaining with transform:`,
+                doc.querySelectorAll("[transform]").length);
+  }
+}
+
+
+// =====================================================
+// E. Style Normalization (stub)
+//   For your 10 example SVGs, styles are mostly inline
+//   or simple attributes, so no heavy work is needed.
+//   For general web SVGs, we would:
+//   - Append the SVG to a hidden <svg> in the DOM.
+//   - Use getComputedStyle() to inline fill/stroke/font.
+//   This is left as a future extension.
+// =====================================================
+function normalizeStyles(doc) {
+  // Intentionally left as a stub for now.
+  // You can later:
+  //  1) Insert doc.documentElement into the page.
+  //  2) Walk elements and call getComputedStyle() to
+  //     copy fill/stroke/font-size/font-family to attributes.
+}
+
+
+// =====================================================
+// Convert SVG string → canvas (PNG via <img>)
+// =====================================================
+function svgToCanvas(svgString) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      // Use natural size; you can scale up if you prefer.
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas);
+    };
+    img.src = "data:image/svg+xml;base64," +
+      btoa(unescape(encodeURIComponent(svgString)));
+  });
+}
+
+
+// =====================================================
+// Pixel Diff (similar to your worker, inline version)
+// =====================================================
+function pixelDiff(canvasA, canvasB, threshold = 32) {
+  const w = Math.min(canvasA.width, canvasB.width);
+  const h = Math.min(canvasA.height, canvasB.height);
+
+  const ctxA = canvasA.getContext("2d");
+  const ctxB = canvasB.getContext("2d");
+  const imgA = ctxA.getImageData(0, 0, w, h);
+  const imgB = ctxB.getImageData(0, 0, w, h);
+
+  const outCanvas = document.getElementById("diffCanvas");
+  outCanvas.width = w;
+  outCanvas.height = h;
+  const outCtx = outCanvas.getContext("2d");
+  const outImg = outCtx.createImageData(w, h);
+
+  let diffCount = 0;
+  const len = w * h * 4;
+
+  for (let i = 0; i < len; i += 4) {
+    const dr = Math.abs(imgA.data[i]   - imgB.data[i]);
+    const dg = Math.abs(imgA.data[i+1] - imgB.data[i+1]);
+    const db = Math.abs(imgA.data[i+2] - imgB.data[i+2]);
+    const da = Math.abs(imgA.data[i+3] - imgB.data[i+3]);
+
+    const isDiff = dr > threshold || dg > threshold || db > threshold || da > threshold;
+
+    if (isDiff) {
+      diffCount++;
+      outImg.data[i]   = 255;
+      outImg.data[i+1] = 0;
+      outImg.data[i+2] = 0;
+      outImg.data[i+3] = 255;
+    } else {
+      outImg.data[i]   = 0;
+      outImg.data[i+1] = 0;
+      outImg.data[i+2] = 0;
+      outImg.data[i+3] = 0;
+    }
+  }
+
+  outCtx.putImageData(outImg, 0, 0);
+  return diffCount / (w * h);
+}
+
+
+// =====================================================
+// MAIN PIPELINE
+// =====================================================
+async function runPipeline() {
+  const fileInput = document.getElementById("svgFile");
+  const runBtn = document.getElementById("runBtn");
+  if (!fileInput.files[0]) {
+    alert("Upload an SVG first.");
+    return;
+  }
+
+  const tol = parseFloat(document.getElementById("tolInput").value) || 0;
+  runBtn.disabled = true;
+
+  try {
+    const svgText = await readFile(fileInput.files[0]);
+
+    // Parse SVG Document
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, "image/svg+xml");
+    const svgEl = doc.documentElement;
+
+    // D. Flatten transforms (critical for ridgeline / histogram / marimekko / etc.)
+    flattenTransforms(doc);
+
+    // C. Tag pruning
+    pruneDecorative(doc, TAG_PRUNE_MODE);
+
+    // A. Duplicate text removal (currently conservative: keep visible <text>)
+    removeDuplicateTexts(doc);
+
+    // E. Style normalization (stub, optional)
+    normalizeStyles(doc);
+
+    // B. Path simplification (selective, command-aware)
+    simplifyAllPaths(doc, tol);
+
+    // Serialize compressed SVG
+    const serializer = new XMLSerializer();
+    const compressedSVG = serializer.serializeToString(svgEl);
+
+    // Convert both original and compressed to canvas
+    const origCanvas = await svgToCanvas(svgText);
+    const compCanvas = await svgToCanvas(compressedSVG);
+
+    // Show images
+    document.getElementById("origImg").src = origCanvas.toDataURL();
+    document.getElementById("compImg").src = compCanvas.toDataURL();
+
+    // Pixel diff
+    const ratio = pixelDiff(origCanvas, compCanvas);
+    document.getElementById("diffRatio").textContent =
+      "Diff Ratio: " + ratio.toFixed(4);
+
+    // Download link for compressed SVG
+    const blob = new Blob([compressedSVG], { type: "image/svg+xml" });
+    document.getElementById("downloadLink").href = URL.createObjectURL(blob);
+
+    document.getElementById("results").style.display = "block";
+  } catch (err) {
+    console.error(err);
+    alert("Error while running pipeline. See console for details.");
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+
+// =====================================================
+// Small UI: show current tolerance value
+// =====================================================
+document.getElementById("tolInput").addEventListener("input", (e) => {
+  document.getElementById("tolValue").textContent = parseFloat(e.target.value).toFixed(1);
+});
+document.getElementById("tolValue").textContent =
+  parseFloat(document.getElementById("tolInput").value).toFixed(1);
+
+</script>
+
+</body>
+</html>
