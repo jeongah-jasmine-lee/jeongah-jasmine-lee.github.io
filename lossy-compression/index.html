@@ -31,7 +31,7 @@
     }
     label { font-size: 14px; }
     input[type="file"] { margin-top: 4px; }
-    input[type="number"], input[type="range"] {
+    input[type="number"], input[type="range"], input[type="text"], input[type="password"] {
       margin-top: 4px;
     }
     button {
@@ -100,6 +100,10 @@
       color: #6b21a8;
       margin-right: 4px;
     }
+    textarea {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -143,7 +147,7 @@
     </label>
     <p class="muted">
       When enabled, the tool will try multiple tolerance values (0 → selected max) and log
-      <em>for each run</em>: tolerance, SVG length, estimated LLM tokens, and Diff Ratio.
+      <em>for each run</em>: tolerance, SVG length, estimated LLM tokens, Diff Ratio, and length reduction.
       It does <strong>not</strong> stop early; it explores the full range so you can see the whole trade-off.
     </p>
   </div>
@@ -255,27 +259,47 @@
 </section>
 
 <section id="claudeSection" style="display:none;">
-  <h3>Next Step: Convert to D3.js via Claude (Design Stub)</h3>
+  <h3>Next Step: Convert to D3.js via <span style="text-decoration: underline;">Gemini</span></h3>
   <p class="muted">
-    When the chosen setting achieves <strong>&ge;10% length reduction</strong> and
-    <strong>Diff Ratio &le; 1%</strong>, it becomes a strong candidate to send to Claude for
-    <strong>SVG → D3.js</strong> conversion.<br><br>
-    Because GitHub Pages is static, this page <em>cannot safely call Claude directly</em>
-    (API keys would be exposed in the frontend). Instead, you would:
+    When the chosen setting achieves <strong>≥10% length reduction</strong> and
+    <strong>Diff Ratio ≤ 1%</strong>, it becomes a strong candidate to send to Gemini for
+    <strong>SVG → D3.js</strong> conversion.
   </p>
-  <ol class="muted">
-    <li>Set up a small backend (e.g., Flask / Node / Cloudflare Worker) that talks to Claude using a secret API key.</li>
-    <li>Expose an endpoint like <code>POST /convert</code> that accepts the compressed SVG and returns D3.js code.</li>
-    <li>Connect the button below to that endpoint (see the commented <code>fetch</code> stub in the JS).</li>
-    <li>Render the D3 result on this page, export as PNG, and compare PNGs with the same pixel diff method.</li>
-  </ol>
-  <button id="claudeBtn" disabled onclick="convertWithClaude()">
-    Convert compressed SVG to D3.js via Claude (stub)
-  </button>
+  <p class="muted">
+    ⚠ <strong>Local-only demo.</strong> Your API key is stored only in this page session and sent directly to
+    Google’s Generative Language API from your browser. Do <em>not</em> use any key you cannot safely expose
+    during local experiments.
+  </p>
+
+  <div class="row">
+    <div class="col">
+      <label for="geminiApiKey">Gemini API key</label><br>
+      <input id="geminiApiKey" type="password" style="width:100%;" placeholder="Enter your Google API key">
+      <p class="muted">
+        You can create a key in Google AI Studio and enable the Generative Language API.
+      </p>
+    </div>
+    <div class="col">
+      <label for="geminiModel">Model</label><br>
+      <input id="geminiModel" type="text" style="width:100%;" value="gemini-2.0-flash" />
+      <label for="geminiMaxTokens" style="margin-top:8px; display:block;">Max tokens</label>
+      <input id="geminiMaxTokens" type="number" value="4096" style="width:120px;">
+    </div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <button id="claudeBtn" disabled onclick="convertWithClaude()">
+      Convert compressed SVG to D3.js via Gemini
+    </button>
+  </div>
   <p class="muted" id="claudeStatus">
-    This button is disabled by default. It will be enabled when a “good” tolerance has been chosen
-    (Diff Ratio ≤ 1% and ≥10% length reduction). You still need to add a backend endpoint to actually call Claude.
+    This button is disabled until the compression pipeline finishes and a candidate is chosen.
   </p>
+
+  <h3>D3 HTML output</h3>
+  <textarea id="d3Output" rows="12" style="width:100%; box-sizing:border-box;">
+Gemini's D3.js HTML will appear here.
+  </textarea>
 </section>
 
 
@@ -294,8 +318,8 @@ const PIXEL_DIFF_THRESHOLD = 32;
 const MAX_GOOD_DIFF = 0.01;       // 1% pixels differ
 const MIN_GOOD_REDUCTION = 0.10;  // 10% length reduction
 
-// Placeholder for Claude backend
-const CLAUDE_BACKEND_URL = "https://your-backend.example.com/convert"; // placeholder
+// Store the currently chosen compressed SVG for Gemini
+let currentCompressedSvg = null;
 
 
 // =====================================================
@@ -324,6 +348,7 @@ function readFile(file) {
 
 // =====================================================
 // A. Redundant / Duplicate Text Removal
+// (currently conservative: keep all <text>)
 // =====================================================
 function removeDuplicateTexts(doc) {
   logMessage("A. Redundant / Duplicate Text Removal: currently conservative (keeping all <text>).");
@@ -340,8 +365,8 @@ function extractNumbers(d) {
 
 // =====================================================
 // B. Path Simplification (more aggressive)
-//   - Now: allow most paths to be simplified, including filled shapes
-//   - Skip only very short paths (few coords) to avoid tiny icons
+//   - Allow most paths to be simplified (including filled shapes)
+//   - Skip only very short paths
 // =====================================================
 function shouldSimplifyPath(pathEl) {
   const d = pathEl.getAttribute("d") || "";
@@ -649,7 +674,9 @@ async function runPipeline() {
   document.getElementById("claudeSection").style.display = "none";
   document.getElementById("claudeBtn").disabled = true;
   document.getElementById("claudeStatus").textContent =
-    "This button is disabled by default. It will be enabled when a “good” tolerance has been chosen (Diff Ratio ≤ 1% and ≥10% length reduction).";
+    "This button is disabled until the compression pipeline finishes and a candidate is chosen.";
+  document.getElementById("d3Output").value = "Gemini's D3.js HTML will appear here.";
+  currentCompressedSvg = null;
 
   runBtn.disabled = true;
 
@@ -798,6 +825,9 @@ async function runPipeline() {
       return;
     }
 
+    // Store compressed SVG for Gemini conversion
+    currentCompressedSvg = chosen.compressedSvg;
+
     // Show compressed image & diff for chosen tolerance
     document.getElementById("compImg").src = chosen.canvas.toDataURL();
     const finalDiff = chosen.diffRatio;
@@ -837,19 +867,21 @@ async function runPipeline() {
     const blob = new Blob([chosen.compressedSvg], { type: "image/svg+xml" });
     document.getElementById("downloadLink").href = URL.createObjectURL(blob);
 
-    // Claude section
+    // Gemini section: always enable button once we have a candidate
     document.getElementById("claudeSection").style.display = "block";
+    const statusEl = document.getElementById("claudeStatus");
+    document.getElementById("claudeBtn").disabled = false;
+
     if (charReduction >= MIN_GOOD_REDUCTION && finalDiff <= MAX_GOOD_DIFF) {
-      document.getElementById("claudeBtn").disabled = false;
-      document.getElementById("claudeStatus").textContent =
-        "Chosen candidate meets the condition (Diff Ratio ≤ 1% and ≥10% reduction). " +
-        "You can now send this compressed SVG to Claude via a backend, then compare D3-rendered PNGs with the same pixel diff method.";
+      statusEl.textContent =
+        "Chosen candidate meets the target (Diff Ratio ≤ 1% and ≥10% reduction). " +
+        "Recommended for SVG → D3 conversion with Gemini.";
       logMessage("Chosen candidate is a GOOD compression point (quality + reduction).");
     } else {
-      document.getElementById("claudeBtn").disabled = true;
-      document.getElementById("claudeStatus").textContent =
+      statusEl.textContent =
         "Chosen candidate does NOT meet the target (Diff Ratio ≤ 1% and ≥10% reduction). " +
-        "You can still send it to Claude via a backend, but it may be too lossy or not compressed enough.";
+        "You can still send it to Gemini, but it may be too lossy or not compressed enough.";
+      logMessage("Chosen candidate does not meet the GOOD threshold, but the Gemini button is enabled.");
     }
 
     logMessage("=== Pipeline complete ===");
@@ -864,15 +896,111 @@ async function runPipeline() {
 
 
 // =====================================================
-// Claude integration stub (design only)
+// Gemini integration (using function name convertWithClaude for compatibility)
 // =====================================================
-function convertWithClaude() {
-  alert(
-    "Claude integration is not implemented in this static page.\n\n" +
-    "To use Claude safely, you need a backend endpoint (e.g., /convert)\n" +
-    "that calls Claude with your API key, then returns D3.js code.\n\n" +
-    "See the CLAUDE_BACKEND_URL constant and add a fetch() call there."
-  );
+async function convertWithClaude() {
+  const btn = document.getElementById("claudeBtn");
+  const statusEl = document.getElementById("claudeStatus");
+  const outputEl = document.getElementById("d3Output");
+  const apiKey = document.getElementById("geminiApiKey").value.trim();
+  const modelInput = document.getElementById("geminiModel").value.trim();
+  const maxTokensInput = parseInt(document.getElementById("geminiMaxTokens").value, 10);
+  const maxTokens = Number.isFinite(maxTokensInput) ? maxTokensInput : 4096;
+  const model = modelInput || "gemini-1.5-flash";
+
+  if (!currentCompressedSvg) {
+    alert("Run the compression pipeline first so we have a compressed SVG to send.");
+    return;
+  }
+  if (!apiKey) {
+    alert("Please enter your Gemini API key.");
+    return;
+  }
+
+  const systemInstruction =
+    "You are an expert in data visualization and D3.js. " +
+    "Given an SVG, you will recreate the chart layout using D3.js v6 in a single self-contained HTML document. " +
+    "Use proper D3 primitives (scales, axes, selections, data binding) and avoid static SVG copies.";
+
+  const userPrompt =
+`${systemInstruction}
+
+Convert the following SVG into a self-contained HTML document that uses D3.js v6 to draw an equivalent visualization.
+
+Requirements:
+1. Do NOT embed the original SVG as-is. Recreate it using D3 primitives (scales, axes, selections, data binding).
+2. The output MUST be a single HTML document that includes a <script> tag loading D3.js v6 from a CDN.
+3. Use clear, modular JavaScript and meaningful variable names.
+4. Preserve the overall visual layout, labels, tick marks, and legend as much as possible.
+5. Do not include Markdown fences or commentary. Return ONLY the HTML.
+
+Here is the SVG:
+
+${currentCompressedSvg}`;
+
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/" +
+    encodeURIComponent(model) +
+    ":generateContent?key=" + encodeURIComponent(apiKey);
+
+  const body = {
+    contents: [
+      {
+        parts: [
+          { text: userPrompt }
+        ]
+      }
+    ],
+    generationConfig: {
+      maxOutputTokens: maxTokens
+    }
+  };
+
+  try {
+    btn.disabled = true;
+    statusEl.textContent = "Calling Gemini API…";
+    outputEl.value = "";
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      logMessage("Gemini API HTTP error: " + res.status + " " + errText);
+      outputEl.value = "// Error from Gemini API:\nHTTP " + res.status + ":\n" + errText;
+      statusEl.textContent = "Gemini API call failed. See log and textarea for details.";
+      return;
+    }
+
+    const data = await res.json();
+    let text = "";
+
+    if (data.candidates && data.candidates.length > 0 &&
+        data.candidates[0].content && data.candidates[0].content.parts) {
+      text = data.candidates[0].content.parts
+        .map(p => (p.text || ""))
+        .join("");
+    } else {
+      // Fallback: dump raw JSON if structure is unexpected
+      text = JSON.stringify(data, null, 2);
+    }
+
+    outputEl.value = text.trim();
+    statusEl.textContent = "Gemini conversion completed. Review the HTML above and test it in a separate page.";
+    logMessage("Gemini conversion completed successfully.");
+  } catch (err) {
+    console.error(err);
+    logMessage("Gemini API call error: " + String(err));
+    outputEl.value = "// Error calling Gemini API:\n" + String(err);
+    statusEl.textContent = "Gemini API call failed (network or CORS). See console/log for details.";
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 
