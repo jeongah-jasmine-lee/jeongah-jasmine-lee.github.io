@@ -259,36 +259,29 @@
 </section>
 
 <section id="claudeSection" style="display:none;">
-  <h3>Next Step: Convert to D3.js via Gemini / OpenAI</h3>
+  <h3>Next Step: Convert to D3.js via <span style="text-decoration: underline;">Gemini</span></h3>
   <p class="muted">
     When the chosen setting achieves <strong>≥10% length reduction</strong> and
-    <strong>Diff Ratio ≤ 1%</strong>, it becomes a strong candidate to send to an LLM for
+    <strong>Diff Ratio ≤ 1%</strong>, it becomes a strong candidate to send to Gemini for
     <strong>SVG → D3.js</strong> conversion.
   </p>
   <p class="muted">
     ⚠ <strong>Local-only demo.</strong> Your API key is stored only in this page session and sent directly to
-    the selected provider from your browser. Do <em>not</em> use any key you cannot safely expose
-    during local experiments. Some providers may block browser calls via CORS; in that case you will
-    need a tiny proxy backend.
+    Google’s Generative Language API from your browser. Do <em>not</em> use any key you cannot safely expose
+    during local experiments.
   </p>
 
   <div class="row">
     <div class="col">
-      <label for="llmProvider">Provider</label><br>
-      <select id="llmProvider" style="width:100%;">
-        <option value="gemini">Gemini</option>
-        <option value="openai">OpenAI</option>
-      </select>
-      <p class="muted" style="margin-top:6px;">
-        For Gemini, use a Google API key with Generative Language API enabled.<br>
-        For OpenAI, use an API key with access to GPT-4.x / GPT-4.1 / GPT-4.1-mini, etc.
+      <label for="geminiApiKey">Gemini API key</label><br>
+      <input id="geminiApiKey" type="password" style="width:100%;" placeholder="Enter your Google API key">
+      <p class="muted">
+        You can create a key in Google AI Studio and enable the Generative Language API.
       </p>
     </div>
     <div class="col">
-      <label for="geminiApiKey">LLM API key (Gemini or OpenAI)</label><br>
-      <input id="geminiApiKey" type="password" style="width:100%;" placeholder="Enter your API key">
-      <label for="geminiModel" style="margin-top:8px; display:block;">Model</label>
-      <input id="geminiModel" type="text" style="width:100%;" value="gemini-1.5-flash" />
+      <label for="geminiModel">Model</label><br>
+      <input id="geminiModel" type="text" style="width:100%;" value="gemini-2.0-flash" />
       <label for="geminiMaxTokens" style="margin-top:8px; display:block;">Max tokens</label>
       <input id="geminiMaxTokens" type="number" value="4096" style="width:120px;">
     </div>
@@ -296,7 +289,7 @@
 
   <div style="margin-top:10px;">
     <button id="claudeBtn" disabled onclick="convertWithClaude()">
-      Convert compressed SVG to D3.js via selected LLM
+      Convert compressed SVG to D3.js via Gemini
     </button>
   </div>
   <p class="muted" id="claudeStatus">
@@ -305,7 +298,7 @@
 
   <h3>D3 HTML output</h3>
   <textarea id="d3Output" rows="12" style="width:100%; box-sizing:border-box;">
-LLM's D3.js HTML will appear here.
+Gemini's D3.js HTML will appear here.
   </textarea>
 </section>
 
@@ -325,7 +318,7 @@ const PIXEL_DIFF_THRESHOLD = 32;
 const MAX_GOOD_DIFF = 0.01;       // 1% pixels differ
 const MIN_GOOD_REDUCTION = 0.10;  // 10% length reduction
 
-// Store the currently chosen compressed SVG for LLM conversion
+// Store the currently chosen compressed SVG for Gemini
 let currentCompressedSvg = null;
 
 
@@ -552,7 +545,7 @@ function svgToCanvas(svgString) {
     img.onerror = e => {
       console.error("Error loading SVG into image", e);
       resolve(null);
-    });
+    };
     img.src = "data:image/svg+xml;base64," +
       btoa(unescape(encodeURIComponent(svgString)));
   });
@@ -682,7 +675,7 @@ async function runPipeline() {
   document.getElementById("claudeBtn").disabled = true;
   document.getElementById("claudeStatus").textContent =
     "This button is disabled until the compression pipeline finishes and a candidate is chosen.";
-  document.getElementById("d3Output").value = "LLM's D3.js HTML will appear here.";
+  document.getElementById("d3Output").value = "Gemini's D3.js HTML will appear here.";
   currentCompressedSvg = null;
 
   runBtn.disabled = true;
@@ -832,7 +825,7 @@ async function runPipeline() {
       return;
     }
 
-    // Store compressed SVG for LLM conversion
+    // Store compressed SVG for Gemini conversion
     currentCompressedSvg = chosen.compressedSvg;
 
     // Show compressed image & diff for chosen tolerance
@@ -874,7 +867,7 @@ async function runPipeline() {
     const blob = new Blob([chosen.compressedSvg], { type: "image/svg+xml" });
     document.getElementById("downloadLink").href = URL.createObjectURL(blob);
 
-    // LLM section: always enable button once we have a candidate
+    // Gemini section: always enable button once we have a candidate
     document.getElementById("claudeSection").style.display = "block";
     const statusEl = document.getElementById("claudeStatus");
     document.getElementById("claudeBtn").disabled = false;
@@ -882,13 +875,13 @@ async function runPipeline() {
     if (charReduction >= MIN_GOOD_REDUCTION && finalDiff <= MAX_GOOD_DIFF) {
       statusEl.textContent =
         "Chosen candidate meets the target (Diff Ratio ≤ 1% and ≥10% reduction). " +
-        "Recommended for SVG → D3 conversion with the selected LLM.";
+        "Recommended for SVG → D3 conversion with Gemini.";
       logMessage("Chosen candidate is a GOOD compression point (quality + reduction).");
     } else {
       statusEl.textContent =
         "Chosen candidate does NOT meet the target (Diff Ratio ≤ 1% and ≥10% reduction). " +
-        "You can still send it to the LLM, but it may be too lossy or not compressed enough.";
-      logMessage("Chosen candidate does not meet the GOOD threshold, but the LLM button is enabled.");
+        "You can still send it to Gemini, but it may be too lossy or not compressed enough.";
+      logMessage("Chosen candidate does not meet the GOOD threshold, but the Gemini button is enabled.");
     }
 
     logMessage("=== Pipeline complete ===");
@@ -903,8 +896,7 @@ async function runPipeline() {
 
 
 // =====================================================
-// LLM integration (Gemini or OpenAI)
-// (kept under the old name convertWithClaude to avoid touching button onclick)
+// Gemini integration (using function name convertWithClaude for compatibility)
 // =====================================================
 async function convertWithClaude() {
   const btn = document.getElementById("claudeBtn");
@@ -912,16 +904,16 @@ async function convertWithClaude() {
   const outputEl = document.getElementById("d3Output");
   const apiKey = document.getElementById("geminiApiKey").value.trim();
   const modelInput = document.getElementById("geminiModel").value.trim();
-  const provider = document.getElementById("llmProvider").value;
   const maxTokensInput = parseInt(document.getElementById("geminiMaxTokens").value, 10);
   const maxTokens = Number.isFinite(maxTokensInput) ? maxTokensInput : 4096;
+  const model = modelInput || "gemini-1.5-flash";
 
   if (!currentCompressedSvg) {
     alert("Run the compression pipeline first so we have a compressed SVG to send.");
     return;
   }
   if (!apiKey) {
-    alert("Please enter your LLM API key.");
+    alert("Please enter your Gemini API key.");
     return;
   }
 
@@ -937,7 +929,7 @@ Convert the following SVG into a self-contained HTML document that uses D3.js v6
 
 Requirements:
 1. Do NOT embed the original SVG as-is. Recreate it using D3 primitives (scales, axes, selections, data binding).
-2. The output MUST be a single HTML document that loads D3.js v6 from a CDN and draws into an <svg> element.
+2. The output MUST be a single HTML document that includes a <script> tag loading D3.js v6 from a CDN.
 3. Use clear, modular JavaScript and meaningful variable names.
 4. Preserve the overall visual layout, labels, tick marks, and legend as much as possible.
 5. Do not include Markdown fences or commentary. Return ONLY the HTML.
@@ -946,121 +938,66 @@ Here is the SVG:
 
 ${currentCompressedSvg}`;
 
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/" +
+    encodeURIComponent(model) +
+    ":generateContent?key=" + encodeURIComponent(apiKey);
+
+  const body = {
+    contents: [
+      {
+        parts: [
+          { text: userPrompt }
+        ]
+      }
+    ],
+    generationConfig: {
+      maxOutputTokens: maxTokens
+    }
+  };
+
   try {
     btn.disabled = true;
-    statusEl.textContent = "Calling " + (provider === "gemini" ? "Gemini" : "OpenAI") + " API…";
+    statusEl.textContent = "Calling Gemini API…";
     outputEl.value = "";
 
-    if (provider === "gemini") {
-      // ------------- Gemini branch -------------
-      const model = modelInput || "gemini-1.5-flash";
-      const url =
-        "https://generativelanguage.googleapis.com/v1beta/models/" +
-        encodeURIComponent(model) +
-        ":generateContent?key=" + encodeURIComponent(apiKey);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
 
-      const body = {
-        contents: [
-          {
-            parts: [
-              { text: userPrompt }
-            ]
-          }
-        ],
-        generationConfig: {
-          maxOutputTokens: maxTokens
-        }
-      };
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        logMessage("Gemini API HTTP error: " + res.status + " " + errText);
-        outputEl.value = "// Error from Gemini API:\nHTTP " + res.status + ":\n" + errText;
-        statusEl.textContent = "Gemini API call failed. See log and textarea for details.";
-        return;
-      }
-
-      const data = await res.json();
-      let text = "";
-
-      if (data.candidates && data.candidates.length > 0 &&
-          data.candidates[0].content && data.candidates[0].content.parts) {
-        text = data.candidates[0].content.parts
-          .map(p => (p.text || ""))
-          .join("");
-      } else {
-        text = JSON.stringify(data, null, 2);
-      }
-
-      outputEl.value = text.trim();
-      statusEl.textContent = "Gemini conversion completed. Review the HTML above and test it in a separate page.";
-      logMessage("Gemini conversion completed successfully.");
-
-    } else {
-      // ------------- OpenAI branch -------------
-      const model = modelInput || "gpt-4.1-mini"; // you can change default
-      const url = "https://api.openai.com/v1/chat/completions";
-
-      const body = {
-        model: model,
-        max_tokens: maxTokens,
-        messages: [
-          { role: "system", content: systemInstruction },
-          { role: "user", content: userPrompt }
-        ]
-      };
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + apiKey
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        logMessage("OpenAI API HTTP error: " + res.status + " " + errText);
-        outputEl.value = "// Error from OpenAI API:\nHTTP " + res.status + ":\n" + errText;
-        statusEl.textContent = "OpenAI API call failed. See log and textarea for details.";
-        return;
-      }
-
-      const data = await res.json();
-      let text = "";
-
-      if (data.choices && data.choices.length > 0 &&
-          data.choices[0].message && data.choices[0].message.content) {
-        const content = data.choices[0].message.content;
-        if (Array.isArray(content)) {
-          text = content.map(p => (typeof p === "string" ? p : p.text || "")).join("");
-        } else {
-          text = content;
-        }
-      } else {
-        text = JSON.stringify(data, null, 2);
-      }
-
-      outputEl.value = text.trim();
-      statusEl.textContent = "OpenAI conversion completed. Review the HTML above and test it in a separate page.";
-      logMessage("OpenAI conversion completed successfully.");
+    if (!res.ok) {
+      const errText = await res.text();
+      logMessage("Gemini API HTTP error: " + res.status + " " + errText);
+      outputEl.value = "// Error from Gemini API:\nHTTP " + res.status + ":\n" + errText;
+      statusEl.textContent = "Gemini API call failed. See log and textarea for details.";
+      return;
     }
 
+    const data = await res.json();
+    let text = "";
+
+    if (data.candidates && data.candidates.length > 0 &&
+        data.candidates[0].content && data.candidates[0].content.parts) {
+      text = data.candidates[0].content.parts
+        .map(p => (p.text || ""))
+        .join("");
+    } else {
+      // Fallback: dump raw JSON if structure is unexpected
+      text = JSON.stringify(data, null, 2);
+    }
+
+    outputEl.value = text.trim();
+    statusEl.textContent = "Gemini conversion completed. Review the HTML above and test it in a separate page.";
+    logMessage("Gemini conversion completed successfully.");
   } catch (err) {
     console.error(err);
-    logMessage("LLM API call error: " + String(err));
-    outputEl.value = "// Error calling LLM API (Gemini/OpenAI):\n" + String(err);
-    statusEl.textContent =
-      "LLM API call failed (network, CORS, or configuration). See console/log for details.";
+    logMessage("Gemini API call error: " + String(err));
+    outputEl.value = "// Error calling Gemini API:\n" + String(err);
+    statusEl.textContent = "Gemini API call failed (network or CORS). See console/log for details.";
   } finally {
     btn.disabled = false;
   }

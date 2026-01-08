@@ -1,1019 +1,762 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>SVG Lossy Compression Feasibility Tester</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SVG Shortener </title>
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding: 20px;
-      max-width: 1080px;
-      margin: 0 auto;
-    }
-    h1, h2, h3 {
-      margin: 0 0 8px;
-    }
-    section { margin-bottom: 24px; }
-    img, canvas {
-      border: 1px solid #ddd;
-      margin: 10px 0;
-      max-width: 420px;
-      display: block;
-      background: #fafafa;
-    }
-    .row {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .col {
-      flex: 1 1 320px;
-    }
-    label { font-size: 14px; }
-    input[type="file"] { margin-top: 4px; }
-    input[type="number"], input[type="range"], input[type="text"], input[type="password"] {
-      margin-top: 4px;
-    }
-    button {
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      background: #18a999;
-      color: white;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .muted {
-      font-size: 13px;
-      color: #666;
-    }
-    code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-      background: #f5f5f5;
-      padding: 2px 4px;
-      border-radius: 3px;
-    }
-    pre {
-      background: #0f172a;
-      color: #e5e7eb;
-      padding: 8px 10px;
-      border-radius: 4px;
-      font-size: 11px;
-      max-height: 220px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-    table {
-      border-collapse: collapse;
-      font-size: 12px;
-      width: 100%;
-      max-width: 100%;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 4px 6px;
-      text-align: left;
-    }
-    th {
-      background: #f4f4f4;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: #e0f7f4;
-      color: #0f766e;
-      margin-left: 4px;
-    }
-    .pill {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: #f3e8ff;
-      color: #6b21a8;
-      margin-right: 4px;
-    }
-    textarea {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-    }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 16px; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .panel { border: 1px solid #ddd; border-radius: 10px; padding: 10px; }
+    .panel h2 { font-size: 14px; margin: 0 0 8px; }
+    textarea { width: 100%; height: 220px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 14px; }
+    button { padding: 8px 10px; border: 1px solid #ccc; border-radius: 10px; background: #fff; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .kpi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+    .kpi .card { border: 1px solid #eee; border-radius: 10px; padding: 8px; }
+    .kpi .label { font-size: 11px; color: #666; }
+    .kpi .value { font-size: 13px; font-weight: 600; }
+    .renderGrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .renderBox { border: 1px solid #ddd; border-radius: 10px; padding: 10px; }
+    canvas { width: 100%; height: auto; border-radius: 8px; background: #fff; }
+    .small { font-size: 12px; color: #555; }
+    .log { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; background: #fafafa; border: 1px solid #eee; padding: 8px; border-radius: 10px; height: 140px; overflow: auto; }
+    .mono { font-family: ui-monospace, monospace; }
   </style>
 </head>
 <body>
+  <h1>SVG Shortener — pixel-identical</h1>
 
-<h2>SVG Lossy Compression Feasibility Tester</h2>
-<p class="muted">
-  This tool runs entirely in your browser (works on GitHub Pages). It shows each pipeline step:
-  <span class="pill">A</span> text pruning,
-  <span class="pill">B</span> path simplification,
-  <span class="pill">C</span> tag pruning,
-  <span class="pill">D</span> transform flattening,
-  <span class="pill">E</span> (stub) style normalization.
-</p>
-
-<section>
-  <div class="row">
-    <div class="col">
-      <label>1. Upload SVG file</label><br>
-      <input type="file" id="svgFile" accept=".svg" />
-    </div>
-    <div class="col">
-      <label for="tolInput">
-        2. Path simplification tolerance (pixels)
-        <span class="badge">What is this?</span>
-      </label><br>
-      <input type="range" id="tolInput" min="0" max="10" step="0.5" value="2">
-      <span id="tolValue">2.0</span> px
-      <p class="muted" style="margin-top:4px;">
-        Tolerance = “how far a simplified line is allowed to deviate from the original line”, in pixels.<br>
-        • Small tolerance (0–1 px): almost identical to original, fewer points removed.<br>
-        • Medium (2–4 px): reasonable simplification, small wiggles are smoothed out.<br>
-        • Large (5+ px): aggressive compression, shape may visibly change.
-      </p>
-    </div>
-  </div>
-
-  <div style="margin-top:8px;">
-    <label>
-      <input type="checkbox" id="autoSearch" checked>
-      3. Auto-search tolerance values and show all iterations
+  <div class="controls">
+    <input id="file" type="file" accept=".svg,image/svg+xml" />
+    <button id="run" disabled>Run pipeline</button>
+    <button id="step" disabled>Step mode</button>
+    <label class="small">Scale
+      <select id="scale">
+        <option value="1">1×</option>
+        <option value="2" selected>2×</option>
+        <option value="3">3×</option>
+      </select>
     </label>
-    <p class="muted">
-      When enabled, the tool will try multiple tolerance values (0 → selected max) and log
-      <em>for each run</em>: tolerance, SVG length, estimated LLM tokens, Diff Ratio, and length reduction.
-      It does <strong>not</strong> stop early; it explores the full range so you can see the whole trade-off.
-    </p>
+    <label class="small">Background
+      <select id="bg">
+        <option value="transparent">transparent</option>
+        <option value="white" selected>white</option>
+      </select>
+    </label>
+    <label class="small">Font override
+      <input id="font" type="text" value="Arial, sans-serif" style="width:220px" />
+    </label>
   </div>
 
-  <button id="runBtn" onclick="runPipeline()">Run Pipeline</button>
-</section>
+  <div class="kpi">
+    <div class="card"><div class="label">Original chars</div><div class="value mono" id="origChars">—</div></div>
+    <div class="card"><div class="label">Shortened chars</div><div class="value mono" id="newChars">—</div></div>
+    <div class="card"><div class="label">Est. tokens (chars/4)</div><div class="value mono" id="tok">—</div></div>
+    <div class="card"><div class="label">Pixel diff (must be 0)</div><div class="value mono" id="diff">—</div></div>
+  </div>
 
-<section>
-  <h3>Pipeline Status & Step-by-Step Log</h3>
-  <p class="muted">
-    This log shows every step that is currently running, in order: parsing, transform flattening (D),
-    tag pruning (C), text pruning (A), style normalization (E stub), path simplification (B),
-    rasterization, and pixel diff computation.
-  </p>
-  <pre id="log"></pre>
-</section>
-
-<section id="summarySection" style="display:none;">
-  <h3>SVG Length & Estimated Token Reduction</h3>
-  <p class="muted">
-    Token counts are rough estimates using <code>char_length / 4</code>. They are not exact tokenizer values,
-    but they show how much the text shrinks relative to the original.
-  </p>
-  <table>
-    <thead>
-      <tr>
-        <th>Metric</th>
-        <th>Original (after A/C/D/E)</th>
-        <th>Compressed (chosen tolerance)</th>
-        <th>Reduction</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Characters (SVG length)</td>
-        <td id="origCharsCell">-</td>
-        <td id="compCharsCell">-</td>
-        <td id="charReductionCell">-</td>
-      </tr>
-      <tr>
-        <td>Estimated GPT tokens (~chars / 4)</td>
-        <td id="origTokensCell">-</td>
-        <td id="compTokensCell">-</td>
-        <td id="tokenReductionCell">-</td>
-      </tr>
-      <tr>
-        <td>Chosen tolerance (px)</td>
-        <td colspan="3" id="chosenToleranceCell">-</td>
-      </tr>
-      <tr>
-        <td>Diff Ratio (original vs compressed)</td>
-        <td colspan="3" id="chosenDiffCell">-</td>
-      </tr>
-    </tbody>
-  </table>
-</section>
-
-<section id="autoSection" style="display:none;">
-  <h3>Auto-search Iterations (Tolerance vs Diff & Length)</h3>
-  <p class="muted">
-    Each row is one run of the pipeline with a different path simplification tolerance.<br>
-    You can see how Diff Ratio and SVG length change as tolerance increases.
-  </p>
-  <table id="iterTable">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Tolerance (px)</th>
-        <th>Chars</th>
-        <th>Est. Tokens</th>
-        <th>Diff Ratio</th>
-        <th>Reduction (%)</th>
-      </tr>
-    </thead>
-    <tbody id="iterTableBody"></tbody>
-  </table>
-</section>
-
-<section id="results" style="display:none;">
-  <div class="row">
-    <div class="col">
-      <h3>Original (after A/C/D/E)</h3>
-      <p class="muted">
-        This image is after “safe” preprocessing: transform flattening (D) and tag pruning (C).
-        These should preserve appearance while cleaning structure.
-      </p>
-      <img id="origImg" alt="Original PNG">
+  <div class="grid" style="margin-top:12px;">
+    <div class="panel">
+      <h2>Original SVG</h2>
+      <textarea id="orig" spellcheck="false"></textarea>
     </div>
-    <div class="col">
-      <h3>Compressed (with chosen tolerance)</h3>
-      <p class="muted">
-        This image uses the chosen path simplification tolerance (B). Ideally it should be visually
-        very close to the original while significantly reducing SVG length.
-      </p>
-      <img id="compImg" alt="Compressed PNG">
+    <div class="panel">
+      <h2>Shortened SVG</h2>
+      <textarea id="out" spellcheck="false"></textarea>
     </div>
   </div>
 
-  <h3>Pixel Diff Heatmap</h3>
-  <p class="muted">
-    Red pixels mark where the compressed image differs from the original (after preprocessing).
-    Diff Ratio is the fraction of pixels that differ above a threshold.
-  </p>
-  <canvas id="diffCanvas"></canvas>
-  <p id="diffRatio"></p>
-
-  <h3>Download Compressed SVG</h3>
-  <a id="downloadLink" download="compressed.svg">Download compressed.svg</a>
-</section>
-
-<section id="claudeSection" style="display:none;">
-  <h3>Next Step: Convert to D3.js via <span style="text-decoration: underline;">Gemini</span></h3>
-  <p class="muted">
-    When the chosen setting achieves <strong>≥10% length reduction</strong> and
-    <strong>Diff Ratio ≤ 1%</strong>, it becomes a strong candidate to send to Gemini for
-    <strong>SVG → D3.js</strong> conversion.
-  </p>
-  <p class="muted">
-    ⚠ <strong>Local-only demo.</strong> Your API key is stored only in this page session and sent directly to
-    Google’s Generative Language API from your browser. Do <em>not</em> use any key you cannot safely expose
-    during local experiments.
-  </p>
-
-  <div class="row">
-    <div class="col">
-      <label for="geminiApiKey">Gemini API key</label><br>
-      <input id="geminiApiKey" type="password" style="width:100%;" placeholder="Enter your Google API key">
-      <p class="muted">
-        You can create a key in Google AI Studio and enable the Generative Language API.
-      </p>
+  <div class="renderGrid" style="margin-top:12px;">
+    <div class="renderBox">
+      <h2 style="font-size:14px;margin:0 0 8px;">Original render</h2>
+      <canvas id="c0"></canvas>
     </div>
-    <div class="col">
-      <label for="geminiModel">Model</label><br>
-      <input id="geminiModel" type="text" style="width:100%;" value="gemini-2.0-flash" />
-      <label for="geminiMaxTokens" style="margin-top:8px; display:block;">Max tokens</label>
-      <input id="geminiMaxTokens" type="number" value="4096" style="width:120px;">
+    <div class="renderBox">
+      <h2 style="font-size:14px;margin:0 0 8px;">Shortened render</h2>
+      <canvas id="c1"></canvas>
+    </div>
+    <div class="renderBox">
+      <h2 style="font-size:14px;margin:0 0 8px;">Diff heatmap</h2>
+      <canvas id="cd"></canvas>
+      <div class="small" style="margin-top:6px;">Heatmap highlights pixels that differ (red). For strict mode, diff must be 0.</div>
     </div>
   </div>
 
-  <div style="margin-top:10px;">
-    <button id="claudeBtn" disabled onclick="convertWithClaude()">
-      Convert compressed SVG to D3.js via Gemini
-    </button>
+  <div style="margin-top:12px;" class="panel">
+    <h2>Log</h2>
+    <div id="log" class="log"></div>
   </div>
-  <p class="muted" id="claudeStatus">
-    This button is disabled until the compression pipeline finishes and a candidate is chosen.
-  </p>
-
-  <h3>D3 HTML output</h3>
-  <textarea id="d3Output" rows="12" style="width:100%; box-sizing:border-box;">
-Gemini's D3.js HTML will appear here.
-  </textarea>
-</section>
-
 
 <script>
-// =====================================================
-// Global config
-// =====================================================
+const $ = (id) => document.getElementById(id);
 
-// Tag pruning mode:
-const TAG_PRUNE_MODE = "RENDER";
+const fileInput = $('file');
+const runBtn = $('run');
+const stepBtn = $('step');
+const origTA = $('orig');
+const outTA = $('out');
+const logEl = $('log');
 
-// Diff threshold used for pixel-wise comparison
-const PIXEL_DIFF_THRESHOLD = 32;
+const origCharsEl = $('origChars');
+const newCharsEl  = $('newChars');
+const tokEl       = $('tok');
+const diffEl      = $('diff');
 
-// "Good" candidate criteria for compression vs quality
-const MAX_GOOD_DIFF = 0.01;       // 1% pixels differ
-const MIN_GOOD_REDUCTION = 0.10;  // 10% length reduction
-
-// Store the currently chosen compressed SVG for Gemini
-let currentCompressedSvg = null;
-
-
-// =====================================================
-// Small logging helper
-// =====================================================
-function logMessage(msg) {
-  const logEl = document.getElementById("log");
-  const time = new Date().toISOString().split("T")[1].replace("Z", "");
-  logEl.textContent += `[${time}] ${msg}\n`;
+function log(msg) {
+  logEl.textContent += msg + "\n";
   logEl.scrollTop = logEl.scrollHeight;
 }
+function clearLog(){ logEl.textContent = ""; }
 
+function estTokens(s) { return Math.ceil((s || "").length / 4); }
 
-// =====================================================
-// Utility: Read uploaded file as text
-// =====================================================
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
+function parseSVG(svgText) {
+  const p = new DOMParser();
+  const doc = p.parseFromString(svgText, "image/svg+xml");
+  const parseError = doc.querySelector("parsererror");
+  if (parseError) throw new Error("SVG parse error: " + parseError.textContent.slice(0, 200));
+  const svg = doc.documentElement;
+  if (!svg || svg.tagName.toLowerCase() !== "svg") throw new Error("Not an SVG root.");
+  return { doc, svg };
 }
 
-
-// =====================================================
-// A. Redundant / Duplicate Text Removal
-// (currently conservative: keep all <text>)
-// =====================================================
-function removeDuplicateTexts(doc) {
-  logMessage("A. Redundant / Duplicate Text Removal: currently conservative (keeping all <text>).");
+function serializeSVG(svgEl) {
+  // Ensure xmlns present
+  if (!svgEl.getAttribute("xmlns")) svgEl.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const s = new XMLSerializer().serializeToString(svgEl);
+  // Light minify: collapse inter-tag whitespace
+  return s.replace(/>\s+</g, "><").trim();
 }
 
-
-// =====================================================
-// Helper: extract all numeric values from a path "d"
-// =====================================================
-function extractNumbers(d) {
-  return (d.match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi) || []).map(Number);
-}
-
-
-// =====================================================
-// B. Path Simplification (more aggressive)
-//   - Allow most paths to be simplified (including filled shapes)
-//   - Skip only very short paths
-// =====================================================
-function shouldSimplifyPath(pathEl) {
-  const d = pathEl.getAttribute("d") || "";
-  if (!d) return false;
-
-  const nums = extractNumbers(d);
-  // Require at least 8 numeric values (4 points) to be worth simplifying
-  if (nums.length < 8) return false;
-
-  return true;
-}
-
-// Convert path d => array of {x,y} by pairing numbers
-function pathToPoints(d) {
-  const nums = extractNumbers(d);
-  const pts = [];
-  for (let i = 0; i + 1 < nums.length; i += 2) {
-    pts.push({ x: nums[i], y: nums[i + 1] });
-  }
-  return pts;
-}
-
-// Rebuild simplified path as "M x y L x y ..." polyline.
-function pointsToPath(pts) {
-  if (!pts.length) return "";
-  let out = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 1; i < pts.length; i++) {
-    out += ` L ${pts[i].x} ${pts[i].y}`;
-  }
-  return out;
-}
-
-// Douglas–Peucker distance
-function perpendicularDistance(point, start, end) {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  if (dx === 0 && dy === 0) {
-    return Math.hypot(point.x - start.x, point.y - start.y);
-  }
-  const t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy);
-  const tClamped = Math.max(0, Math.min(1, t));
-  const projX = start.x + tClamped * dx;
-  const projY = start.y + tClamped * dy;
-  return Math.hypot(point.x - projX, point.y - projY);
-}
-
-// Recursive Douglas–Peucker
-function douglasPeucker(points, epsilon) {
-  if (points.length <= 2) return points;
-  let maxDist = 0;
-  let index = 0;
-  const start = points[0];
-  const end = points[points.length - 1];
-  for (let i = 1; i < points.length - 1; i++) {
-    const d = perpendicularDistance(points[i], start, end);
-    if (d > maxDist) {
-      index = i;
-      maxDist = d;
+function getRefs(svgEl) {
+  const refs = new Set();
+  const walker = document.createTreeWalker(svgEl, NodeFilter.SHOW_ELEMENT);
+  let n = walker.currentNode;
+  while(n) {
+    for (const attr of n.attributes || []) {
+      const v = attr.value;
+      // url(#id)
+      const m1 = v.match(/url\(#([^)]+)\)/);
+      if (m1) refs.add(m1[1]);
+      // href="#id" or xlink:href
+      const m2 = v.match(/^#(.+)$/);
+      if ((attr.name === "href" || attr.name.endsWith(":href")) && m2) refs.add(m2[1]);
     }
+    n = walker.nextNode();
   }
-  if (maxDist > epsilon) {
-    const left = douglasPeucker(points.slice(0, index + 1), epsilon);
-    const right = douglasPeucker(points.slice(index), epsilon);
-    return left.slice(0, -1).concat(right);
-  } else {
-    return [start, end];
-  }
+  return refs;
 }
 
-// Simplify all eligible paths in the document
-function simplifyAllPaths(doc, tolerancePx) {
-  const paths = [...doc.querySelectorAll("path")];
-  let simplifiedCount = 0;
+function removeMetadata(svgEl) {
+  svgEl.querySelectorAll("metadata, desc, title").forEach(e => e.remove());
+}
 
-  paths.forEach(pathEl => {
-    if (!shouldSimplifyPath(pathEl)) return;
-    const d = pathEl.getAttribute("d");
-    const pts = pathToPoints(d);
-    if (pts.length < 3) return;
+function removeComments(svgEl) {
+  const walker = document.createTreeWalker(svgEl, NodeFilter.SHOW_COMMENT);
+  const toRemove = [];
+  let n = walker.nextNode();
+  while(n) { toRemove.push(n); n = walker.nextNode(); }
+  toRemove.forEach(c => c.remove());
+}
 
-    const simp = douglasPeucker(pts, tolerancePx);
-    const newD = pointsToPath(simp);
-    pathEl.setAttribute("d", newD);
-    simplifiedCount++;
+function isNonRendering(el) {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "defs") return false;
+  const disp = el.getAttribute("display");
+  if (disp && disp.toLowerCase() === "none") return true;
+  const op = el.getAttribute("opacity");
+  if (op !== null && Number(op) === 0) return true;
+  // shapes with no fill and no stroke
+  const fill = el.getAttribute("fill") ?? (el.getAttribute("style")?.match(/fill\s*:\s*([^;]+)/)?.[1] ?? null);
+  const stroke = el.getAttribute("stroke") ?? (el.getAttribute("style")?.match(/stroke\s*:\s*([^;]+)/)?.[1] ?? null);
+  const hasGeom = ["path","rect","circle","ellipse","line","polyline","polygon","text"].includes(tag);
+  if (hasGeom) {
+    const fillNone = (fill && fill.trim() === "none");
+    const strokeNone = (stroke && stroke.trim() === "none");
+    if ((fill === null || fillNone) && (stroke === null || strokeNone)) return true;
+  }
+  return false;
+}
+
+function pruneNonRendering(svgEl) {
+  // remove elements bottom-up
+  const all = Array.from(svgEl.querySelectorAll("*")).reverse();
+  for (const el of all) {
+    if (isNonRendering(el)) el.remove();
+  }
+  // remove empty groups
+  svgEl.querySelectorAll("g").forEach(g => { if (g.children.length === 0 && !g.textContent.trim()) g.remove(); });
+}
+
+function pruneUnusedIdsAndDefs(svgEl) {
+  const refs = getRefs(svgEl);
+
+  // Prune defs children not referenced by id
+  svgEl.querySelectorAll("defs").forEach(defs => {
+    Array.from(defs.children).forEach(ch => {
+      const id = ch.getAttribute("id");
+      if (id && !refs.has(id)) ch.remove();
+    });
+    if (defs.children.length === 0) defs.remove();
   });
 
-  logMessage(`B. Path Simplification: simplified ${simplifiedCount} path(s) with tolerance = ${tolerancePx.toFixed(2)} px.`);
-}
-
-
-// =====================================================
-// C. Tag Pruning
-// =====================================================
-function pruneDecorative(doc, mode) {
-  let removed = 0;
-
-  if (mode === "RENDER") {
-    ["title", "desc", "metadata"].forEach(tag => {
-      doc.querySelectorAll(tag).forEach(el => {
-        el.remove();
-        removed++;
-      });
-    });
-  } else if (mode === "LLM") {
-    doc.querySelectorAll("metadata").forEach(el => {
-      el.remove();
-      removed++;
-    });
-  }
-
-  logMessage(`C. Tag Pruning (${mode} mode): removed ${removed} element(s).`);
-}
-
-
-// =====================================================
-// D. Transform Flattening (group-level translate)
-// =====================================================
-function parseTranslate(transformStr) {
-  if (!transformStr) return null;
-  const match = /translate\(\s*([-\d.]+)(?:[ ,]([-\d.]+))?\s*\)/.exec(transformStr);
-  if (!match) return null;
-  const tx = parseFloat(match[1] || "0") || 0;
-  const ty = parseFloat(match[2] || "0") || 0;
-  return { tx, ty };
-}
-
-function flattenTransforms(doc) {
-  logMessage("D. Transform Flattening: pushing translate() from groups into children.");
-  let pass = 0;
-  while (true) {
-    const groups = [...doc.querySelectorAll("g[transform]")];
-    if (!groups.length) break;
-    pass++;
-
-    groups.forEach(g => {
-      const tr = parseTranslate(g.getAttribute("transform"));
-      if (!tr) return;
-      const prefix = `translate(${tr.tx},${tr.ty})`;
-
-      [...g.children].forEach(child => {
-        const existing = child.getAttribute("transform") || "";
-        const newTransform = existing ? `${prefix} ${existing}` : prefix;
-        child.setAttribute("transform", newTransform.trim());
-      });
-
-      g.removeAttribute("transform");
-    });
-
-    logMessage(`  - Flatten pass ${pass}, remaining <g transform>: ${doc.querySelectorAll("g[transform]").length}`);
-  }
-}
-
-
-// =====================================================
-// E. Style Normalization (stub)
-// =====================================================
-function normalizeStyles(doc) {
-  logMessage("E. Style Normalization: stub (no changes for now).");
-}
-
-
-// =====================================================
-// SVG → Canvas (PNG)
-// =====================================================
-function svgToCanvas(svgString) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas);
-    };
-    img.onerror = e => {
-      console.error("Error loading SVG into image", e);
-      resolve(null);
-    };
-    img.src = "data:image/svg+xml;base64," +
-      btoa(unescape(encodeURIComponent(svgString)));
+  // Remove ids that are not referenced
+  svgEl.querySelectorAll("[id]").forEach(el => {
+    const id = el.getAttribute("id");
+    if (id && !refs.has(id)) el.removeAttribute("id");
   });
 }
 
+function shortenReferencedIds(svgEl) {
+  const refs = getRefs(svgEl);
+  const ids = Array.from(refs);
+  const map = new Map();
+  const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let idx = 0;
+  function nextId() {
+    let n = idx++;
+    let s = "";
+    do { s = alphabet[n % alphabet.length] + s; n = Math.floor(n / alphabet.length) - 1; } while (n >= 0);
+    return s;
+  }
+  for (const oldId of ids) map.set(oldId, nextId());
 
-// =====================================================
-// Pixel Diff
-// =====================================================
-function pixelDiff(canvasA, canvasB, threshold = PIXEL_DIFF_THRESHOLD) {
-  const w = Math.min(canvasA.width, canvasB.width);
-  const h = Math.min(canvasA.height, canvasB.height);
+  // Update id attributes
+  svgEl.querySelectorAll("[id]").forEach(el => {
+    const id = el.getAttribute("id");
+    if (id && map.has(id)) el.setAttribute("id", map.get(id));
+  });
 
-  const ctxA = canvasA.getContext("2d");
-  const ctxB = canvasB.getContext("2d");
-  const imgA = ctxA.getImageData(0, 0, w, h);
-  const imgB = ctxB.getImageData(0, 0, w, h);
+  // Update references
+  const walker = document.createTreeWalker(svgEl, NodeFilter.SHOW_ELEMENT);
+  let n = walker.currentNode;
+  while (n) {
+    for (const attr of n.attributes || []) {
+      let v = attr.value;
+      // url(#id)
+      v = v.replace(/url\(#([^)]+)\)/g, (m, g1) => map.has(g1) ? `url(#${map.get(g1)})` : m);
+      // href="#id"
+      if (attr.name === "href" || attr.name.endsWith(":href")) {
+        v = v.replace(/^#(.+)$/, (m, g1) => map.has(g1) ? `#${map.get(g1)}` : m);
+      }
+      if (v !== attr.value) n.setAttribute(attr.name, v);
+    }
+    n = walker.nextNode();
+  }
+}
 
-  const outCanvas = document.getElementById("diffCanvas");
-  outCanvas.width = w;
-  outCanvas.height = h;
-  const outCtx = outCanvas.getContext("2d");
-  const outImg = outCtx.createImageData(w, h);
+function normalizeColors(svgEl) {
+  const rgbToHex = (s) => {
+    const m = s.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+    if (!m) return s;
+    const r = Number(m[1]), g = Number(m[2]), b = Number(m[3]);
+    const hx = (n)=>n.toString(16).padStart(2,'0');
+    let hex = `#${hx(r)}${hx(g)}${hx(b)}`.toLowerCase();
+    // shorten #rrggbb -> #rgb when possible
+    if (hex[1]===hex[2] && hex[3]===hex[4] && hex[5]===hex[6]) hex = `#${hex[1]}${hex[3]}${hex[5]}`;
+    return hex;
+  };
 
-  let diffCount = 0;
-  const len = w * h * 4;
+  const walker = document.createTreeWalker(svgEl, NodeFilter.SHOW_ELEMENT);
+  let n = walker.currentNode;
+  while(n) {
+    for (const a of Array.from(n.attributes || [])) {
+      if (["fill","stroke","stop-color","color"].includes(a.name)) {
+        const nv = rgbToHex(a.value);
+        if (nv !== a.value) n.setAttribute(a.name, nv);
+      }
+      if (a.name === "style") {
+        // replace rgb(...) inside style
+        const nv = a.value.replace(/rgb\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)/gi, (m)=>rgbToHex(m));
+        if (nv !== a.value) n.setAttribute("style", nv);
+      }
+    }
+    n = walker.nextNode();
+  }
+}
 
-  for (let i = 0; i < len; i += 4) {
-    const dr = Math.abs(imgA.data[i]   - imgB.data[i]);
-    const dg = Math.abs(imgA.data[i+1] - imgB.data[i+1]);
-    const db = Math.abs(imgA.data[i+2] - imgB.data[i+2]);
-    const da = Math.abs(imgA.data[i+3] - imgB.data[i+3]);
+function parseStyle(styleText) {
+  const m = new Map();
+  if (!styleText) return m;
+  styleText.split(";").forEach(part => {
+    const [k,v] = part.split(":");
+    if (!k || !v) return;
+    const key = k.trim().toLowerCase();
+    const val = v.trim();
+    if (key) m.set(key, val);
+  });
+  return m;
+}
+function styleMapToText(m) {
+  const parts = [];
+  for (const [k,v] of m.entries()) parts.push(`${k}:${v}`);
+  return parts.join(";");
+}
 
-    const isDiff = dr > threshold || dg > threshold || db > threshold || da > threshold;
+const STYLE_KEYS = [
+  "fill","fill-opacity","stroke","stroke-width","stroke-opacity","stroke-linecap","stroke-linejoin","stroke-dasharray","stroke-dashoffset",
+  "opacity","font-family","font-size","font-weight","text-anchor","dominant-baseline","shape-rendering"
+];
 
-    if (isDiff) {
-      diffCount++;
-      outImg.data[i]   = 255;
-      outImg.data[i+1] = 0;
-      outImg.data[i+2] = 0;
-      outImg.data[i+3] = 255;
-    } else {
-      outImg.data[i]   = 0;
-      outImg.data[i+1] = 0;
-      outImg.data[i+2] = 0;
-      outImg.data[i+3] = 0;
+function getPresentationStyle(el) {
+  const m = new Map();
+  // from style=""
+  const s = parseStyle(el.getAttribute("style") || "");
+  for (const [k,v] of s.entries()) if (STYLE_KEYS.includes(k)) m.set(k, v);
+  // from attributes
+  for (const k of STYLE_KEYS) {
+    if (el.hasAttribute(k)) m.set(k, el.getAttribute(k));
+  }
+  return m;
+}
+
+function applyClassFactorization(svgEl) {
+  // Build signatures
+  const elems = Array.from(svgEl.querySelectorAll("*")).filter(el => el.tagName && el.tagName.toLowerCase() !== "defs" && el.tagName.toLowerCase() !== "style");
+  const sigToEls = new Map();
+
+  for (const el of elems) {
+    const m = getPresentationStyle(el);
+    if (m.size === 0) continue;
+    // signature string sorted keys
+    const sig = Array.from(m.entries()).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`${k}=${v}`).join("|");
+    if (!sigToEls.has(sig)) sigToEls.set(sig, []);
+    sigToEls.get(sig).push(el);
+  }
+
+  // Create classes for signatures with enough repetition
+  const MIN_REUSE = 5;
+  const classRules = [];
+  let classIdx = 1;
+
+  for (const [sig, els] of sigToEls.entries()) {
+    if (els.length < MIN_REUSE) continue;
+    const cls = `c${classIdx++}`;
+    // turn sig back into css
+    const css = sig.split("|").map(kv => kv.replace("=", ":")).join(";");
+    classRules.push(`.${cls}{${css}}`);
+    for (const el of els) {
+      // Remove style attrs covered by class
+      const m = getPresentationStyle(el);
+      for (const k of m.keys()) {
+        el.removeAttribute(k);
+      }
+      el.removeAttribute("style"); // style already included in sig; safe to remove
+      // Append class
+      const prev = el.getAttribute("class");
+      el.setAttribute("class", prev ? `${prev} ${cls}` : cls);
     }
   }
 
-  outCtx.putImageData(outImg, 0, 0);
-  return diffCount / (w * h);
+  if (classRules.length) {
+    // Insert style as first child
+    const styleEl = svgEl.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "style");
+    styleEl.textContent = classRules.join("");
+    // Prepend
+    svgEl.insertBefore(styleEl, svgEl.firstChild);
+  }
 }
 
-
-// =====================================================
-// Tolerance list for auto-search
-// =====================================================
-function generateToleranceList(maxTol) {
-  const clamped = Math.min(Math.max(maxTol, 0), 10);
-  const step = 0.5;
-  const list = [];
-  for (let t = 0; t <= clamped + 1e-6; t += step) {
-    list.push(parseFloat(t.toFixed(2)));
+function safeFlattenGroups(svgEl) {
+  // Flatten <g> that has no visual-affecting attrs
+  const SAFE_ATTRS = new Set(["id","class"]);
+  const gs = Array.from(svgEl.querySelectorAll("g"));
+  for (const g of gs) {
+    const attrs = Array.from(g.attributes || []);
+    const unsafe = attrs.some(a => !SAFE_ATTRS.has(a.name));
+    if (unsafe) continue;
+    // Move children to parent
+    const parent = g.parentNode;
+    if (!parent) continue;
+    while (g.firstChild) parent.insertBefore(g.firstChild, g);
+    g.remove();
   }
-  if (!list.includes(parseFloat(clamped.toFixed(2)))) {
-    list.push(parseFloat(clamped.toFixed(2)));
-  }
-  return list;
 }
 
-
-// =====================================================
-// Single tolerance run
-//   - returns { tolerance, compressedSvg, canvas, charLen, tokenEst, diffRatio, reduction }
-// =====================================================
-async function runSingleTolerance(baselineSvg, baselineCharLen, origCanvas, tolerance, iterationIndex) {
-  logMessage(`--- Iteration ${iterationIndex}: Running with tolerance = ${tolerance.toFixed(2)} px ---`);
-
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(baselineSvg, "image/svg+xml");
-
-  simplifyAllPaths(doc, tolerance);
-
-  const serializer = new XMLSerializer();
-  const compressedSvg = serializer.serializeToString(doc.documentElement);
-  const charLen = compressedSvg.length;
-  const tokenEst = Math.ceil(charLen / 4);
-  const reduction = 1 - (charLen / baselineCharLen);
-
-  logMessage(`  - Serialized compressed SVG: ${charLen} chars (~${tokenEst} tokens), reduction ${(reduction * 100).toFixed(2)} %.`);
-  logMessage("  - Rasterizing compressed SVG to canvas...");
-  const compCanvas = await svgToCanvas(compressedSvg);
-  if (!compCanvas) {
-    logMessage("  ! Failed to rasterize compressed SVG; skipping diff for this iteration.");
-    return { tolerance, compressedSvg, canvas: null, charLen, tokenEst, diffRatio: NaN, reduction };
-  }
-
-  logMessage("  - Computing pixel diff against baseline (after A/C/D/E)...");
-  const diffRatio = pixelDiff(origCanvas, compCanvas);
-  logMessage(`  - Diff Ratio = ${diffRatio.toFixed(6)}`);
-
-  return { tolerance, compressedSvg, canvas: compCanvas, charLen, tokenEst, diffRatio, reduction };
+function injectFontOverride(svgEl, fontFamily) {
+  if (!fontFamily) return;
+  // Add style rule to enforce font-family on text (do not touch existing if user wants)
+  const styleEl = svgEl.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "style");
+  styleEl.textContent = `text{font-family:${fontFamily};}`;
+  svgEl.insertBefore(styleEl, svgEl.firstChild);
 }
 
+function minifyPathData(svgEl) {
+  svgEl.querySelectorAll("path[d]").forEach(p => {
+    let d = p.getAttribute("d");
+    if (!d) return;
+    d = d.replace(/,/g, " ");
+    d = d.replace(/\s+/g, " ").trim();
+    // shorten leading zeros in decimals: 0.5 -> .5, -0.5 -> -.5
+    d = d.replace(/\b(-?)0\.(\d+)/g, "$1.$2");
+    // remove trailing zeros in decimals: 1.2300 -> 1.23, 1.0 -> 1
+    d = d.replace(/(-?\d+)\.(\d*?)0+\b/g, (m, a, b) => b ? `${a}.${b}` : a);
+    // remove unnecessary spaces around command letters
+    d = d.replace(/\s*([A-Za-z])\s*/g, "$1");
+    // re-add spaces between numbers/commands minimally (keep as is; browsers parse compactly)
+    p.setAttribute("d", d);
+  });
+}
 
-// =====================================================
-// MAIN PIPELINE
-// =====================================================
-async function runPipeline() {
-  const fileInput = document.getElementById("svgFile");
-  const runBtn = document.getElementById("runBtn");
-  const auto = document.getElementById("autoSearch").checked;
-  const tolInput = document.getElementById("tolInput");
-  const maxTol = parseFloat(tolInput.value) || 0;
+function roundNumbersInAny(svgEl, decimals, mode) {
+  // mode: 'geom' (all numeric attrs + style), 'path' (path d only)
+  const reNum = /-?\d*\.?\d+(?:e[-+]?\d+)?/gi;
+  const roundStr = (s) => {
+    return s.replace(reNum, (m) => {
+      // skip scientific notation to avoid weird rounding; keep as-is
+      if (/e/i.test(m)) return m;
+      const x = Number(m);
+      if (!isFinite(x)) return m;
+      const f = Math.pow(10, decimals);
+      const y = Math.round(x * f) / f;
+      // stringify compactly
+      let out = String(y);
+      // shorten leading zero
+      out = out.replace(/^(-?)0\.(\d+)/, '$1.$2');
+      return out;
+    });
+  };
 
-  if (!fileInput.files[0]) {
-    alert("Upload an SVG first.");
+  if (mode === "path") {
+    svgEl.querySelectorAll("path[d]").forEach(p => p.setAttribute("d", roundStr(p.getAttribute("d"))));
     return;
   }
 
-  document.getElementById("log").textContent = "";
-  document.getElementById("iterTableBody").innerHTML = "";
-  document.getElementById("results").style.display = "none";
-  document.getElementById("summarySection").style.display = "none";
-  document.getElementById("autoSection").style.display = "none";
-  document.getElementById("claudeSection").style.display = "none";
-  document.getElementById("claudeBtn").disabled = true;
-  document.getElementById("claudeStatus").textContent =
-    "This button is disabled until the compression pipeline finishes and a candidate is chosen.";
-  document.getElementById("d3Output").value = "Gemini's D3.js HTML will appear here.";
-  currentCompressedSvg = null;
-
-  runBtn.disabled = true;
-
-  try {
-    logMessage("=== Starting pipeline ===");
-    logMessage("Reading SVG file...");
-    const svgText = await readFile(fileInput.files[0]);
-
-    logMessage("Parsing SVG with DOMParser...");
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(svgText, "image/svg+xml");
-    const svgEl = doc.documentElement;
-
-    logMessage("Applying preprocessing steps A/C/D/E (without path simplification) to build baseline:");
-    flattenTransforms(doc);
-    pruneDecorative(doc, TAG_PRUNE_MODE);
-    removeDuplicateTexts(doc);
-    normalizeStyles(doc);
-
-    const serializer = new XMLSerializer();
-    const baselineSvg = serializer.serializeToString(svgEl);
-    const baselineCharLen = baselineSvg.length;
-    const baselineTokens = Math.ceil(baselineCharLen / 4);
-    logMessage(`Baseline SVG (after A/C/D/E) length: ${baselineCharLen} chars (~${baselineTokens} tokens).`);
-
-    logMessage("Rasterizing baseline SVG to canvas for reference...");
-    const origCanvas = await svgToCanvas(baselineSvg);
-    if (!origCanvas) {
-      logMessage("! Failed to rasterize baseline SVG. Aborting.");
-      alert("Could not rasterize baseline SVG. Check console for details.");
-      return;
-    }
-
-    document.getElementById("origImg").src = origCanvas.toDataURL();
-    document.getElementById("results").style.display = "block";
-
-    let iterations = [];
-    if (auto) {
-      logMessage("Auto-search is enabled. Generating tolerance list...");
-      const tolList = generateToleranceList(maxTol);
-      logMessage(`Tolerance list: [${tolList.join(", ")}]`);
-
-      document.getElementById("autoSection").style.display = "block";
-
-      let idx = 1;
-      for (const tol of tolList) {
-        const result = await runSingleTolerance(baselineSvg, baselineCharLen, origCanvas, tol, idx);
-        iterations.push(result);
-
-        const row = document.createElement("tr");
-        const diffText = isNaN(result.diffRatio) ? "N/A" : result.diffRatio.toFixed(6);
-        const redText = isNaN(result.reduction) ? "N/A" : (result.reduction * 100).toFixed(2);
-
-        row.innerHTML = `
-          <td>${idx}</td>
-          <td>${tol.toFixed(2)}</td>
-          <td>${result.charLen}</td>
-          <td>${result.tokenEst}</td>
-          <td>${diffText}</td>
-          <td>${redText}</td>
-        `;
-        document.getElementById("iterTableBody").appendChild(row);
-
-        idx++;
-      }
-
-      logMessage("Auto-search completed.");
-    } else {
-      logMessage(`Auto-search is disabled. Running single tolerance = ${maxTol.toFixed(2)} px.`);
-      const single = await runSingleTolerance(baselineSvg, baselineCharLen, origCanvas, maxTol, 1);
-      iterations.push(single);
-
-      const row = document.createElement("tr");
-      const diffText = isNaN(single.diffRatio) ? "N/A" : single.diffRatio.toFixed(6);
-      const redText = isNaN(single.reduction) ? "N/A" : (single.reduction * 100).toFixed(2);
-      row.innerHTML = `
-        <td>1</td>
-        <td>${maxTol.toFixed(2)}</td>
-        <td>${single.charLen}</td>
-        <td>${single.tokenEst}</td>
-        <td>${diffText}</td>
-        <td>${redText}</td>
-      `;
-      document.getElementById("iterTableBody").appendChild(row);
-      document.getElementById("autoSection").style.display = "block";
-    }
-
-    if (!iterations.length) {
-      logMessage("No iterations completed; aborting.");
-      return;
-    }
-
-    // --- Candidate selection logic ---
-    // 1) Prefer candidates with diff ≤ 1% and reduction ≥ 10%, pick max reduction
-    let chosen;
-    const goodCandidates = iterations.filter(r =>
-      r.canvas && !isNaN(r.diffRatio) &&
-      r.diffRatio <= MAX_GOOD_DIFF &&
-      r.reduction >= MIN_GOOD_REDUCTION
-    );
-
-    if (goodCandidates.length > 0) {
-      chosen = goodCandidates.reduce((best, curr) =>
-        curr.reduction > best.reduction ? curr : best
-      );
-      logMessage(
-        `Choosing best GOOD candidate (diff ≤ ${(MAX_GOOD_DIFF*100).toFixed(2)}%, ` +
-        `reduction ≥ ${(MIN_GOOD_REDUCTION*100).toFixed(0)}%): ` +
-        `tol=${chosen.tolerance.toFixed(2)} px, diff=${chosen.diffRatio.toFixed(6)}, ` +
-        `reduction=${(chosen.reduction*100).toFixed(2)}%.`
-      );
-    } else {
-      // 2) If none, pick candidate with ≥10% reduction and smallest diff
-      const reduced = iterations.filter(r =>
-        r.canvas && !isNaN(r.diffRatio) && r.reduction >= MIN_GOOD_REDUCTION
-      );
-      if (reduced.length > 0) {
-        chosen = reduced.reduce((best, curr) =>
-          curr.diffRatio < best.diffRatio ? curr : best
-        );
-        logMessage(
-          `No candidate met both constraints. ` +
-          `Choosing ≥10% reduction with smallest diff: tol=${chosen.tolerance.toFixed(2)} px, ` +
-          `diff=${chosen.diffRatio.toFixed(6)}, reduction=${(chosen.reduction*100).toFixed(2)}%.`
-        );
+  // geometry attrs + style + path
+  const walker = document.createTreeWalker(svgEl, NodeFilter.SHOW_ELEMENT);
+  let n = walker.currentNode;
+  while(n) {
+    for (const a of Array.from(n.attributes || [])) {
+      if (a.name === "d" && n.tagName.toLowerCase() === "path") {
+        n.setAttribute("d", roundStr(a.value));
+      } else if (a.name === "style") {
+        n.setAttribute("style", roundStr(a.value));
       } else {
-        // 3) Fallback: minimum diff (original behaviour)
-        chosen = iterations.reduce((best, curr) => {
-          if (!best) return curr;
-          if (isNaN(curr.diffRatio)) return best;
-          if (isNaN(best.diffRatio)) return curr;
-          return curr.diffRatio < best.diffRatio ? curr : best;
-        }, null);
-        if (chosen) {
-          logMessage(
-            `No iteration achieved ≥10% reduction. ` +
-            `Falling back to minimum diff: tol=${chosen.tolerance.toFixed(2)} px, ` +
-            `diff=${chosen.diffRatio.toFixed(6)}, reduction=${(chosen.reduction*100).toFixed(2)}%.`
-          );
+        // attributes that are likely numeric
+        if (/[0-9]/.test(a.value)) {
+          n.setAttribute(a.name, roundStr(a.value));
         }
       }
     }
-
-    if (!chosen || !chosen.canvas) {
-      logMessage("Could not determine a valid chosen iteration. Aborting.");
-      return;
-    }
-
-    // Store compressed SVG for Gemini conversion
-    currentCompressedSvg = chosen.compressedSvg;
-
-    // Show compressed image & diff for chosen tolerance
-    document.getElementById("compImg").src = chosen.canvas.toDataURL();
-    const finalDiff = chosen.diffRatio;
-    document.getElementById("diffRatio").textContent =
-      "Diff Ratio (chosen tolerance): " + finalDiff.toFixed(6);
-
-    // Summary numbers
-    const origCharsCell = document.getElementById("origCharsCell");
-    const compCharsCell = document.getElementById("compCharsCell");
-    const charReductionCell = document.getElementById("charReductionCell");
-    const origTokensCell = document.getElementById("origTokensCell");
-    const compTokensCell = document.getElementById("compTokensCell");
-    const tokenReductionCell = document.getElementById("tokenReductionCell");
-    const chosenToleranceCell = document.getElementById("chosenToleranceCell");
-    const chosenDiffCell = document.getElementById("chosenDiffCell");
-
-    const compLen = chosen.charLen;
-    const compTokens = chosen.tokenEst;
-
-    const charReduction = chosen.reduction;
-    const tokenReduction = 1 - (compTokens / baselineTokens);
-
-    origCharsCell.textContent = baselineCharLen;
-    compCharsCell.textContent = compLen;
-    charReductionCell.textContent = (charReduction * 100).toFixed(2) + " %";
-
-    origTokensCell.textContent = baselineTokens;
-    compTokensCell.textContent = compTokens;
-    tokenReductionCell.textContent = (tokenReduction * 100).toFixed(2) + " %";
-
-    chosenToleranceCell.textContent = chosen.tolerance.toFixed(2) + " px";
-    chosenDiffCell.textContent = finalDiff.toFixed(6);
-
-    document.getElementById("summarySection").style.display = "block";
-
-    // Download link
-    const blob = new Blob([chosen.compressedSvg], { type: "image/svg+xml" });
-    document.getElementById("downloadLink").href = URL.createObjectURL(blob);
-
-    // Gemini section: always enable button once we have a candidate
-    document.getElementById("claudeSection").style.display = "block";
-    const statusEl = document.getElementById("claudeStatus");
-    document.getElementById("claudeBtn").disabled = false;
-
-    if (charReduction >= MIN_GOOD_REDUCTION && finalDiff <= MAX_GOOD_DIFF) {
-      statusEl.textContent =
-        "Chosen candidate meets the target (Diff Ratio ≤ 1% and ≥10% reduction). " +
-        "Recommended for SVG → D3 conversion with Gemini.";
-      logMessage("Chosen candidate is a GOOD compression point (quality + reduction).");
-    } else {
-      statusEl.textContent =
-        "Chosen candidate does NOT meet the target (Diff Ratio ≤ 1% and ≥10% reduction). " +
-        "You can still send it to Gemini, but it may be too lossy or not compressed enough.";
-      logMessage("Chosen candidate does not meet the GOOD threshold, but the Gemini button is enabled.");
-    }
-
-    logMessage("=== Pipeline complete ===");
-  } catch (err) {
-    console.error(err);
-    logMessage("! Error while running pipeline: " + String(err));
-    alert("Error while running pipeline. See console/log for details.");
-  } finally {
-    runBtn.disabled = false;
+    n = walker.nextNode();
   }
 }
 
+function minifyAttributes(svgEl) {
+  // remove explicit opacity=1 (often redundant) but verify later anyway
+  svgEl.querySelectorAll("[opacity='1'],[opacity='1.0']").forEach(el => el.removeAttribute("opacity"));
+  // remove style="opacity: 1;" patterns
+  svgEl.querySelectorAll("[style]").forEach(el => {
+    const sm = parseStyle(el.getAttribute("style"));
+    if (sm.get("opacity") === "1" || sm.get("opacity") === "1.0") sm.delete("opacity");
+    const st = styleMapToText(sm);
+    if (!st) el.removeAttribute("style");
+    else el.setAttribute("style", st);
+  });
+}
 
-// =====================================================
-// Gemini integration (using function name convertWithClaude for compatibility)
-// =====================================================
-async function convertWithClaude() {
-  const btn = document.getElementById("claudeBtn");
-  const statusEl = document.getElementById("claudeStatus");
-  const outputEl = document.getElementById("d3Output");
-  const apiKey = document.getElementById("geminiApiKey").value.trim();
-  const modelInput = document.getElementById("geminiModel").value.trim();
-  const maxTokensInput = parseInt(document.getElementById("geminiMaxTokens").value, 10);
-  const maxTokens = Number.isFinite(maxTokensInput) ? maxTokensInput : 4096;
-  const model = modelInput || "gemini-1.5-flash";
-
-  if (!currentCompressedSvg) {
-    alert("Run the compression pipeline first so we have a compressed SVG to send.");
-    return;
-  }
-  if (!apiKey) {
-    alert("Please enter your Gemini API key.");
-    return;
-  }
-
-  const systemInstruction =
-    "You are an expert in data visualization and D3.js. " +
-    "Given an SVG, you will recreate the chart layout using D3.js v6 in a single self-contained HTML document. " +
-    "Use proper D3 primitives (scales, axes, selections, data binding) and avoid static SVG copies.";
-
-  const userPrompt =
-`${systemInstruction}
-
-Convert the following SVG into a self-contained HTML document that uses D3.js v6 to draw an equivalent visualization.
-
-Requirements:
-1. Do NOT embed the original SVG as-is. Recreate it using D3 primitives (scales, axes, selections, data binding).
-2. The output MUST be a single HTML document that includes a <script> tag loading D3.js v6 from a CDN.
-3. Use clear, modular JavaScript and meaningful variable names.
-4. Preserve the overall visual layout, labels, tick marks, and legend as much as possible.
-5. Do not include Markdown fences or commentary. Return ONLY the HTML.
-
-Here is the SVG:
-
-${currentCompressedSvg}`;
-
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    encodeURIComponent(model) +
-    ":generateContent?key=" + encodeURIComponent(apiKey);
-
-  const body = {
-    contents: [
-      {
-        parts: [
-          { text: userPrompt }
-        ]
-      }
-    ],
-    generationConfig: {
-      maxOutputTokens: maxTokens
-    }
-  };
-
+function getRenderSize(svgText) {
+  // Determine a stable raster size: prefer viewBox
   try {
-    btn.disabled = true;
-    statusEl.textContent = "Calling Gemini API…";
-    outputEl.value = "";
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      logMessage("Gemini API HTTP error: " + res.status + " " + errText);
-      outputEl.value = "// Error from Gemini API:\nHTTP " + res.status + ":\n" + errText;
-      statusEl.textContent = "Gemini API call failed. See log and textarea for details.";
-      return;
+    const { svg } = parseSVG(svgText);
+    const vb = svg.getAttribute("viewBox");
+    const wAttr = svg.getAttribute("width");
+    const hAttr = svg.getAttribute("height");
+    if (vb) {
+      const parts = vb.trim().split(/[ ,]+/).map(Number);
+      if (parts.length === 4 && parts.every(n => isFinite(n))) {
+        return { w: Math.max(1, Math.round(parts[2])), h: Math.max(1, Math.round(parts[3])) };
+      }
     }
-
-    const data = await res.json();
-    let text = "";
-
-    if (data.candidates && data.candidates.length > 0 &&
-        data.candidates[0].content && data.candidates[0].content.parts) {
-      text = data.candidates[0].content.parts
-        .map(p => (p.text || ""))
-        .join("");
-    } else {
-      // Fallback: dump raw JSON if structure is unexpected
-      text = JSON.stringify(data, null, 2);
+    if (wAttr && hAttr) {
+      const w = Math.round(parseFloat(wAttr));
+      const h = Math.round(parseFloat(hAttr));
+      if (isFinite(w) && isFinite(h)) return { w: Math.max(1,w), h: Math.max(1,h) };
     }
-
-    outputEl.value = text.trim();
-    statusEl.textContent = "Gemini conversion completed. Review the HTML above and test it in a separate page.";
-    logMessage("Gemini conversion completed successfully.");
-  } catch (err) {
-    console.error(err);
-    logMessage("Gemini API call error: " + String(err));
-    outputEl.value = "// Error calling Gemini API:\n" + String(err);
-    statusEl.textContent = "Gemini API call failed (network or CORS). See console/log for details.";
-  } finally {
-    btn.disabled = false;
-  }
+  } catch {}
+  // fallback
+  return { w: 800, h: 600 };
 }
 
+async function renderToCanvas(svgText, canvas, scale, bg) {
+  const { w, h } = getRenderSize(svgText);
+  const cw = Math.max(1, Math.round(w * scale));
+  const ch = Math.max(1, Math.round(h * scale));
 
-// =====================================================
-// Small UI: show current tolerance value
-// =====================================================
-document.getElementById("tolInput").addEventListener("input", (e) => {
-  document.getElementById("tolValue").textContent = parseFloat(e.target.value).toFixed(1);
+  canvas.width = cw;
+  canvas.height = ch;
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,cw,ch);
+
+  if (bg === "white") {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0,0,cw,ch);
+  }
+
+  const blob = new Blob([svgText], {type: "image/svg+xml"});
+  const url = URL.createObjectURL(blob);
+
+  const img = new Image();
+  img.decoding = "async";
+
+  await new Promise((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Failed to load SVG into Image()"));
+    img.src = url;
+  });
+
+  ctx.drawImage(img, 0, 0, cw, ch);
+  URL.revokeObjectURL(url);
+
+  return ctx.getImageData(0,0,cw,ch);
+}
+
+function diffImageData(a, b, diffCanvas) {
+  if (a.width !== b.width || a.height !== b.height) throw new Error("ImageData size mismatch");
+  const w = a.width, h = a.height;
+  const da = a.data, db = b.data;
+
+  const out = diffCanvas.getContext("2d").createImageData(w, h);
+  let diffPixels = 0;
+  let maxChannelDiff = 0;
+
+  for (let i=0;i<da.length;i+=4) {
+    const dr = Math.abs(da[i]-db[i]);
+    const dg = Math.abs(da[i+1]-db[i+1]);
+    const dbb= Math.abs(da[i+2]-db[i+2]);
+    const daA= Math.abs(da[i+3]-db[i+3]);
+    const m = Math.max(dr,dg,dbb,daA);
+    if (m !== 0) {
+      diffPixels++;
+      if (m > maxChannelDiff) maxChannelDiff = m;
+      // mark red
+      out.data[i] = 255;
+      out.data[i+1] = 0;
+      out.data[i+2] = 0;
+      out.data[i+3] = 255;
+    } else {
+      out.data[i] = 0;
+      out.data[i+1] = 0;
+      out.data[i+2] = 0;
+      out.data[i+3] = 0;
+    }
+  }
+
+  diffCanvas.width = w;
+  diffCanvas.height = h;
+  diffCanvas.getContext("2d").putImageData(out, 0, 0);
+
+  return { diffPixels, maxChannelDiff };
+}
+
+async function verifyPixelIdentical(svg0, svg1) {
+  const scale = Number($('scale').value);
+  const bg = $('bg').value;
+
+  const c0 = $('c0');
+  const c1 = $('c1');
+  const cd = $('cd');
+
+  const i0 = await renderToCanvas(svg0, c0, scale, bg);
+  const i1 = await renderToCanvas(svg1, c1, scale, bg);
+  const d = diffImageData(i0, i1, cd);
+  return d;
+}
+
+function updateKPIs(orig, out, diff) {
+  origCharsEl.textContent = orig.length.toLocaleString();
+  newCharsEl.textContent  = out.length.toLocaleString();
+  const t0 = estTokens(orig), t1 = estTokens(out);
+  tokEl.textContent = `${t0.toLocaleString()} → ${t1.toLocaleString()} (${Math.round((1 - t1/t0)*100)}%)`;
+  diffEl.textContent = diff ? `${diff.diffPixels.toLocaleString()} px (maxΔ ${diff.maxChannelDiff})` : "—";
+}
+
+function stage_SafeCleanup(svgText) {
+  const { svg } = parseSVG(svgText);
+  removeComments(svg);
+  removeMetadata(svg);
+  pruneNonRendering(svg);
+  pruneUnusedIdsAndDefs(svg);
+  minifyAttributes(svg);
+  normalizeColors(svg);
+  shortenReferencedIds(svg);
+  injectFontOverride(svg, $('font').value);
+  return serializeSVG(svg);
+}
+
+function stage_StyleAndGroups(svgText) {
+  const { svg } = parseSVG(svgText);
+  safeFlattenGroups(svg);
+  applyClassFactorization(svg);
+  normalizeColors(svg);
+  minifyAttributes(svg);
+  return serializeSVG(svg);
+}
+
+function stage_PathMinify(svgText) {
+  const { svg } = parseSVG(svgText);
+  minifyPathData(svg);
+  return serializeSVG(svg);
+}
+
+function tryPrecisionSearch(svgTextBest, svgTextOrig, mode) {
+  // mode: 'geom' or 'path' (only path numbers)
+  // test decimals from 6 down to 0
+  const decimalsList = [6,4,3,2,1,0];
+  return { decimalsList, mode };
+}
+
+async function runPrecisionSearch(svgBest, svgOrig, mode) {
+  const decimalsList = [6,4,3,2,1,0];
+  let best = svgBest;
+  for (const d of decimalsList) {
+    const { svg } = parseSVG(best);
+    roundNumbersInAny(svg, d, mode === "path" ? "path" : "geom");
+    const cand = serializeSVG(svg);
+    // Only consider if actually smaller
+    if (cand.length >= best.length) continue;
+
+    const diff = await verifyPixelIdentical(svgOrig, cand);
+    if (diff.diffPixels === 0) {
+      log(`✓ Precision ${mode} decimals=${d} accepted (${best.length.toLocaleString()} → ${cand.length.toLocaleString()})`);
+      best = cand;
+    } else {
+      log(`✗ Precision ${mode} decimals=${d} rejected (diffPixels=${diff.diffPixels})`);
+    }
+  }
+  return best;
+}
+
+async function runPipeline(svg0) {
+  clearLog();
+  log("Starting pipeline…");
+  const start = performance.now();
+
+  let best = svg0;
+  let diff = await verifyPixelIdentical(svg0, svg0);
+  updateKPIs(svg0, best, diff);
+
+  // Stage A
+  const a = stage_SafeCleanup(best);
+  log(`Stage A produced ${a.length.toLocaleString()} chars`);
+  diff = await verifyPixelIdentical(svg0, a);
+  if (diff.diffPixels === 0 && a.length < best.length) {
+    best = a; log("✓ Stage A accepted");
+  } else {
+    log("✗ Stage A rejected or not smaller");
+  }
+
+  // Stage B/C
+  const b = stage_StyleAndGroups(best);
+  log(`Stage B/C produced ${b.length.toLocaleString()} chars`);
+  diff = await verifyPixelIdentical(svg0, b);
+  if (diff.diffPixels === 0 && b.length < best.length) {
+    best = b; log("✓ Stage B/C accepted");
+  } else {
+    log("✗ Stage B/C rejected or not smaller");
+  }
+
+  // Stage E-lite (path minify)
+  const p = stage_PathMinify(best);
+  log(`Stage PathMinify produced ${p.length.toLocaleString()} chars`);
+  diff = await verifyPixelIdentical(svg0, p);
+  if (diff.diffPixels === 0 && p.length < best.length) {
+    best = p; log("✓ Path minify accepted");
+  } else {
+    log("✗ Path minify rejected or not smaller");
+  }
+
+  // Precision search: geometry first, then path-only (often safer)
+  best = await runPrecisionSearch(best, svg0, "geom");
+  best = await runPrecisionSearch(best, svg0, "path");
+
+  // Final verify + KPIs
+  diff = await verifyPixelIdentical(svg0, best);
+  updateKPIs(svg0, best, diff);
+
+  const end = performance.now();
+  log(`Done in ${Math.round(end - start)} ms`);
+  return best;
+}
+
+// Step mode: run each stage and show accept/reject without full search
+async function runStepMode(svg0) {
+  clearLog();
+  log("Step mode…");
+
+  let cur = svg0;
+  let diff = await verifyPixelIdentical(svg0, svg0);
+  updateKPIs(svg0, cur, diff);
+
+  const stages = [
+    { name: "Stage A (Safe cleanup)", fn: stage_SafeCleanup },
+    { name: "Stage B/C (Style + groups)", fn: stage_StyleAndGroups },
+    { name: "Stage PathMinify", fn: stage_PathMinify }
+  ];
+
+  for (const st of stages) {
+    const cand = st.fn(cur);
+    log(`${st.name}: ${cand.length.toLocaleString()} chars`);
+    diff = await verifyPixelIdentical(svg0, cand);
+    if (diff.diffPixels === 0 && cand.length < cur.length) {
+      cur = cand; log("  ✓ accepted");
+    } else {
+      log("  ✗ rejected or not smaller");
+    }
+    updateKPIs(svg0, cur, diff);
+    outTA.value = cur;
+  }
+
+  log("Step mode finished. (No precision search in step mode.)");
+  return cur;
+}
+
+fileInput.addEventListener('change', async () => {
+  clearLog();
+  const f = fileInput.files?.[0];
+  if (!f) return;
+  const text = await f.text();
+  origTA.value = text;
+  outTA.value = text;
+
+  runBtn.disabled = false;
+  stepBtn.disabled = false;
+
+  const diff = await verifyPixelIdentical(text, text);
+  updateKPIs(text, text, diff);
+  log(`Loaded ${f.name} (${text.length.toLocaleString()} chars)`);
 });
-document.getElementById("tolValue").textContent =
-  parseFloat(document.getElementById("tolInput").value).toFixed(1);
 
+runBtn.addEventListener('click', async () => {
+  runBtn.disabled = true; stepBtn.disabled = true;
+  try {
+    const svg0 = origTA.value;
+    const out = await runPipeline(svg0);
+    outTA.value = out;
+  } catch (e) {
+    log("ERROR: " + (e?.message || e));
+  } finally {
+    runBtn.disabled = false; stepBtn.disabled = false;
+  }
+});
+
+stepBtn.addEventListener('click', async () => {
+  runBtn.disabled = true; stepBtn.disabled = true;
+  try {
+    const svg0 = origTA.value;
+    const out = await runStepMode(svg0);
+    outTA.value = out;
+  } catch (e) {
+    log("ERROR: " + (e?.message || e));
+  } finally {
+    runBtn.disabled = false; stepBtn.disabled = false;
+  }
+});
 </script>
-
 </body>
 </html>
