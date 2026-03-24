@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeongah Jasmine Lee | Research Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overflow: hidden; }
+        
+        /* Venn Diagram Styling - Ellipse Version */
+        .venn-shape {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            opacity: 0.2;
+            stroke-width: 1px;
+        }
+        .venn-shape:hover { opacity: 0.35; }
+        .venn-shape.active { 
+            opacity: 0.8; 
+            stroke-width: 3px;
+        }
+        
+        /* Compact Glassmorphism Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.2s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.05);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+        .project-tag { font-size: 0.6rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; }
+        
+        .venn-label-item {
+            font-size: 8px;
+            font-weight: 700;
+            fill: #334155;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .prelim-text {
+            font-size: 9px;
+            font-weight: 800;
+            fill: #94a3b8;
+            letter-spacing: 0.05em;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="text-slate-900 h-screen overflow-hidden">
+
+    <div id="app" class="h-full flex flex-col p-4 md:p-8 max-w-[1600px] mx-auto">
+        <!-- Compact Header -->
+        <header class="w-full mb-6 flex justify-between items-center border-b border-slate-100 pb-4">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tighter text-slate-900">Human-AI Interaction</h1>
+                <p class="text-blue-600 font-bold tracking-widest text-[10px] uppercase">Jeongah Jasmine Lee • UMass Amherst</p>
+            </div>
+            
+            <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 scale-90 origin-right">
+                <button onclick="setAuthorFilter('all')" id="btn-all" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-white">All</button>
+                <button onclick="setAuthorFilter(1)" id="btn-1" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">1st Author</button>
+                <button onclick="setAuthorFilter(2)" id="btn-2" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">2nd Author</button>
+            </div>
+        </header>
+
+        <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
+            
+            <!-- Left: Larger Venn Diagram (7/12 cols) -->
+            <div class="lg:col-span-7 flex flex-col items-center justify-center bg-white/50 rounded-[2rem] border border-slate-100 shadow-sm relative p-4">
+                <div class="w-full h-full max-w-3xl">
+                    <svg viewBox="0 0 500 400" class="w-full h-full">
+                        <!-- Preliminary Markers in White Space -->
+                        <text x="20" y="40" class="prelim-text">PRELIMINARY RESEARCH</text>
+                        <text x="25" y="60" font-size="8" fill="#cbd5e1" font-weight="600" id="prelim-1-label">• [Decomposition - Study]</text>
+                        
+                        <text x="350" y="340" class="prelim-text">PRELIMINARY RESEARCH</text>
+                        <text x="355" y="360" font-size="8" fill="#cbd5e1" font-weight="600" id="prelim-2-label">• [Glanceable - Benchmarking]</text>
+
+                        <!-- Venn Shapes -->
+                        <ellipse cx="180" cy="160" rx="150" ry="100" fill="#3b82f6" class="venn-shape" id="shape-Visualization" onclick="toggleCategory('Visualization')" stroke="#2563eb" />
+                        <ellipse cx="320" cy="160" rx="150" ry="100" fill="#f43f5e" class="venn-shape" id="shape-Mental-Health" onclick="toggleCategory('Mental Health')" stroke="#e11d48" />
+                        <ellipse cx="250" cy="250" rx="150" ry="100" fill="#10b981" class="venn-shape" id="shape-Sensors" onclick="toggleCategory('Sensors')" stroke="#059669" />
+                        
+                        <!-- Titles -->
+                        <text x="60" y="145" font-weight="900" font-size="14" fill="#1e40af" class="pointer-events-none tracking-tight">VISUALIZATION</text>
+                        <text x="310" y="145" font-weight="900" font-size="14" fill="#9f1239" class="pointer-events-none tracking-tight">MENTAL HEALTH</text>
+                        <text x="210" y="340" font-weight="900" font-size="14" fill="#065f46" class="pointer-events-none tracking-tight">SENSORS</text>
+
+                        <g id="svg-labels"></g>
+                    </svg>
+                </div>
+                <div class="absolute bottom-4 left-6 flex gap-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-white/80 px-4 py-2 rounded-full border border-slate-100">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> Vis</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Mental</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Sensors</span>
+                </div>
+            </div>
+
+            <!-- Right: Denser Project Grid (5/12 cols) -->
+            <div class="lg:col-span-5 flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar" id="project-list-container">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="project-list">
+                    <!-- Cards injected here -->
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+            <p>© 2026 Jeongah Jasmine Lee</p>
+            <div class="flex gap-4">
+                <a href="#" class="hover:text-blue-600 transition-colors">Scholar</a>
+                <a href="#" class="hover:text-blue-600 transition-colors">LinkedIn</a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const projects = [
+            {
+                shortTitle: "SVG Semantics",
+                progress: "Review",
+                fullTitle: "Cohort-based Semantic Labeling: AI-Enabled Recovery of Visualization Semantics from Deployed SVGs",
+                rq: "How can we recover high-level semantic structures and data encodings from raw, deployed SVGs?",
+                methodology: "Multi-stage AI pipeline (CSL) that forms element cohorts and interprets roles using grounded LLMs.",
+                category: "Visualization",
+                role: 1,
+                color: "blue",
+                venue: "IEEE VIS '26"
+            },
+            {
+                shortTitle: "Agentic Acc",
+                progress: "In Prep",
+                fullTitle: "Agentic Accessibility: A New Paradigm for Graphics Accessibility for BLV",
+                rq: "How can conversational LVLM agents empower BLV users to explore spatial graphics independently?",
+                methodology: "Interactive framework integrating intent identification and spatial reasoning for floorplans.",
+                category: "Visualization",
+                role: 1,
+                color: "blue",
+                venue: "ACM ASSETS"
+            },
+            {
+                shortTitle: "Math Diagrams",
+                progress: "Accepted",
+                fullTitle: "From Text to Visuals: Using LLMs to Generate Math Diagrams",
+                rq: "To what extent can LLMs automate pedagogically accurate geometric diagrams from text?",
+                methodology: "Evaluation of LLM-generated TikZ/SVG code against pedagogical benchmarks.",
+                category: "Visualization",
+                role: 2,
+                color: "blue",
+                venue: "AIED 2025"
+            },
+            {
+                shortTitle: "Carey Bot",
+                progress: "Active",
+                fullTitle: "Carey: AI-driven mental health tools for Alzheimer's caregivers",
+                rq: "Can multi-agent AI provide effective cognitive reframing for caregivers facing high burnout?",
+                methodology: "Implementation of agent orchestrator for journaling and CBT-informed venting support.",
+                category: "Mental Health",
+                role: 1,
+                color: "rose",
+                venue: "HCI-VIS Lab"
+            },
+            {
+                shortTitle: "Rupture Study",
+                progress: "Working",
+                fullTitle: "Empirical Alliance Ruptures in Human-AI Therapeutic Dialogues",
+                rq: "What specific conversational patterns characterize breakdowns (ruptures) in AI mental health support?",
+                methodology: "Thematic analysis of multi-turn dialogues validated by clinical psychologists.",
+                category: "Mental Health",
+                role: 1,
+                color: "rose",
+                venue: "IMWUT"
+            },
+            {
+                shortTitle: "RubRIX",
+                progress: "Review",
+                fullTitle: "RubRIX: Rubric-Driven Risk Mitigation in Caregiver-AI Interactions",
+                rq: "How can clinician-validated rubrics mitigate safety risks like epistemic arrogance in AI agents?",
+                methodology: "Risk framework grounded in 'Ethics of Care' and expert-in-the-loop evaluation.",
+                category: "Mental Health",
+                role: 2,
+                color: "rose",
+                venue: "ACL"
+            },
+            {
+                shortTitle: "Gratitude Journal",
+                progress: "Research",
+                fullTitle: "Motivations and Engagement Patterns in Digital Gratitude Journaling",
+                rq: "What motivates gratitude practice initiation and how does digital scaffolding sustain it?",
+                methodology: "Qualitative thematic analysis of user motivations and routine behaviors in journaling apps.",
+                category: "Mental Health",
+                role: 1,
+                color: "rose",
+                venue: "Mental Health Study"
+            },
+            {
+                shortTitle: "En3 Sense",
+                progress: "Review",
+                fullTitle: "En3: A Tripartite Approach to Engagement Detection",
+                rq: "How does fusion of EEG, eye-tracking, and EDA signals improve engagement detection?",
+                methodology: "Synchronized multimodal data collection (N=30) and ML fusion analysis.",
+                category: "Sensors",
+                role: 2,
+                color: "emerald",
+                venue: "IMWUT"
+            },
+            {
+                shortTitle: "Music Pref",
+                progress: "Ongoing",
+                fullTitle: "Music Preference: Sensor-based analysis of user emotional response",
+                rq: "Can physiological markers predict user musical preference before explicit feedback?",
+                methodology: "Real-time analysis using EEG and EmotiBit (EDA, PPG, Temp) during stimuli.",
+                category: "Sensors",
+                role: 2,
+                color: "emerald",
+                venue: "Ongoing Research"
+            },
+            // Preliminary Studies (Show only when category is 'all')
+            {
+                shortTitle: "Decomposition",
+                progress: "Study",
+                fullTitle: "SVG Decomposition for Enhancing LMMs Visualization Comprehension",
+                rq: "Does decomposing SVGs into semantic layers improve the spatial reasoning of LVLMs for floor plans?",
+                methodology: "Comparative benchmarking of PNG and SVG inputs across GPT-4o, Claude 3.7, and Llama 3.2.",
+                category: "Preliminary",
+                role: 1,
+                color: "slate",
+                venue: "Research Study"
+            },
+            {
+                shortTitle: "Glanceable",
+                progress: "Benchmarking",
+                fullTitle: "Age-Inclusive Trust in AI-Generated Glanceable Health Visualizations",
+                rq: "How do age-dependent cognitive patterns influence trust in AI-curated health data summaries?",
+                methodology: "Benchmarking pipeline and user study comparing younger (20-30) and older (65+) adults.",
+                category: "Preliminary",
+                role: 1,
+                color: "slate",
+                venue: "EuroVis '26 Prep"
+            }
+        ];
+
+        let currentAuthorFilter = 'all';
+        let currentCategory = 'all';
+
+        function setAuthorFilter(role) {
+            currentAuthorFilter = role;
+            updateUI();
+        }
+
+        function toggleCategory(cat) {
+            if (currentCategory === cat) currentCategory = 'all';
+            else currentCategory = cat;
+            updateUI();
+        }
+
+        function updateUI() {
+            // Update Filter Buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-900', 'text-white', 'bg-blue-600', 'bg-indigo-600');
+                btn.classList.add('text-slate-500');
+            });
+            const activeBtn = document.getElementById(`btn-${currentAuthorFilter}`);
+            activeBtn.classList.remove('text-slate-500');
+            if (currentAuthorFilter === 'all') activeBtn.classList.add('bg-slate-900', 'text-white');
+            else if (currentAuthorFilter === 1) activeBtn.classList.add('bg-blue-600', 'text-white');
+            else activeBtn.classList.add('bg-indigo-600', 'text-white');
+
+            // Update Venn Shapes
+            document.querySelectorAll('.venn-shape').forEach(c => {
+                c.classList.remove('active');
+                if (currentCategory === 'all') c.style.opacity = "0.2";
+                else if (c.id === `shape-${currentCategory.replace(' ', '-')}`) {
+                    c.classList.add('active');
+                } else {
+                    c.style.opacity = "0.05";
+                }
+            });
+
+            // Update Preliminary Labels (Only visible in 'all')
+            const p1 = document.getElementById('prelim-1-label');
+            const p2 = document.getElementById('prelim-2-label');
+            if(currentCategory === 'all') {
+                p1.setAttribute("opacity", "1"); p2.setAttribute("opacity", "1");
+            } else {
+                p1.setAttribute("opacity", "0.1"); p2.setAttribute("opacity", "0.1");
+            }
+
+            // SVG Mini Labels for Domains
+            const labelContainer = document.getElementById('svg-labels');
+            labelContainer.innerHTML = '';
+            const posMap = { 'Visualization': { x: 70, y: 175 }, 'Mental Health': { x: 300, y: 175 }, 'Sensors': { x: 170, y: 275 } };
+
+            Object.keys(posMap).forEach(cat => {
+                const catProjects = projects.filter(p => p.category === cat && (currentAuthorFilter === 'all' || p.role === currentAuthorFilter));
+                catProjects.slice(0, 4).forEach((p, i) => {
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", posMap[cat].x); text.setAttribute("y", posMap[cat].y + (i * 10));
+                    text.setAttribute("class", "venn-label-item"); text.textContent = `[${p.shortTitle}]`;
+                    if (currentCategory !== 'all' && currentCategory !== cat) text.setAttribute("opacity", "0.1");
+                    labelContainer.appendChild(text);
+                });
+            });
+
+            // Filter Projects for List (Logic: Show 'Preliminary' only when category is 'all')
+            const filtered = projects.filter(p => {
+                const authorMatch = currentAuthorFilter === 'all' || p.role === currentAuthorFilter;
+                let categoryMatch = false;
+                if (currentCategory === 'all') {
+                    categoryMatch = true; // All includes Preliminary
+                } else {
+                    categoryMatch = p.category === currentCategory; // Domain specific excludes Preliminary
+                }
+                return authorMatch && categoryMatch;
+            });
+
+            const listContainer = document.getElementById('project-list');
+            listContainer.innerHTML = '';
+
+            filtered.forEach(p => {
+                const card = document.createElement('div');
+                card.className = "glass-card p-3 rounded-xl flex flex-col gap-2";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="project-tag bg-slate-100 text-slate-500 border border-slate-200">${p.progress}</span>
+                        <span class="text-[8px] font-bold text-slate-300 uppercase">${p.role === 1 ? '1st' : '2nd'} Auth</span>
+                    </div>
+                    <h3 class="text-[11px] font-extrabold text-slate-900 leading-tight">${p.fullTitle}</h3>
+                    <div class="flex flex-col gap-1.5">
+                        <p class="text-[9px] text-slate-600 leading-tight italic">"${p.rq}"</p>
+                        <p class="text-[9px] text-slate-500 leading-tight border-l-2 border-slate-100 pl-2">${p.methodology}</p>
+                    </div>
+                    <div class="mt-auto pt-2 flex justify-between items-center opacity-60">
+                        <span class="text-[8px] font-bold text-slate-400">${p.venue}</span>
+                        <i data-lucide="arrow-up-right" size="10"></i>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+        updateUI();
+    </script>
+</body>
+</html>
