@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeongah Jasmine Lee | Research Portfolio</title>
+    <title>Jasmine Lee | Research Portfolio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
@@ -65,8 +65,8 @@
         <!-- Compact Header -->
         <header class="w-full mb-6 flex justify-between items-center border-b border-slate-100 pb-4">
             <div>
-                <h1 class="text-3xl font-extrabold tracking-tighter text-slate-900">Human-AI Interaction</h1>
-                <p class="text-blue-600 font-bold tracking-widest text-[10px] uppercase">Jeongah Jasmine Lee • UMass Amherst</p>
+                <h1 class="text-2xl font-extrabold tracking-tighter text-slate-900">Human-Computer Interaction, Human-AI Interaction</h1>
+                <p class="text-blue-600 font-bold tracking-widest text-[15px] uppercase">Jasmine Lee • UMass Amherst 2nd year CS PhD Student</p>
             </div>
             
             <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 scale-90 origin-right">
@@ -79,16 +79,19 @@
         <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
             
             <!-- Left: Larger Venn Diagram (7/12 cols) -->
-            <div class="lg:col-span-7 flex flex-col items-center justify-center bg-white/50 rounded-[2rem] border border-slate-100 shadow-sm relative p-4">
+            <div class="lg:col-span-5 flex flex-col items-center justify-center bg-white/50 rounded-[2rem] border border-slate-100 shadow-sm relative p-4">
                 <div class="w-full h-full max-w-3xl">
                     <svg viewBox="0 0 500 400" class="w-full h-full">
                         <!-- Preliminary Markers in White Space -->
                         <text x="20" y="40" class="prelim-text">PRELIMINARY RESEARCH</text>
-                        <text x="25" y="60" font-size="8" fill="#cbd5e1" font-weight="600" id="prelim-1-label">• [Decomposition - Study]</text>
+                        <text x="25" y="50" font-size="8" fill="#cbd5e1" font-weight="600" id="prelim-1-label">• [SVG Decomposition - Arxiv]</text>
                         
                         <text x="350" y="340" class="prelim-text">PRELIMINARY RESEARCH</text>
-                        <text x="355" y="360" font-size="8" fill="#cbd5e1" font-weight="600" id="prelim-2-label">• [Glanceable - Benchmarking]</text>
+                        <text x="355" y="350" font-size="8" fill="#cbd5e1" font-weight="600" id="prelim-2-label">• [Glanceable Health VIS- Arxiv]</text>
 
+                        <text x="300" y="380" class="prelim-text">ETC / PAST WORKS</text>
+                        <text x="300" y="390" font-size="7" fill="#cbd5e1" font-weight="600" id="etc-label">• [IoT Edge-Cloud - Published, IEEE Network Magazine]</text>
+                        
                         <!-- Venn Shapes -->
                         <ellipse cx="180" cy="160" rx="150" ry="100" fill="#3b82f6" class="venn-shape" id="shape-Visualization" onclick="toggleCategory('Visualization')" stroke="#2563eb" />
                         <ellipse cx="320" cy="160" rx="150" ry="100" fill="#f43f5e" class="venn-shape" id="shape-Mental-Health" onclick="toggleCategory('Mental Health')" stroke="#e11d48" />
@@ -110,7 +113,7 @@
             </div>
 
             <!-- Right: Denser Project Grid (5/12 cols) -->
-            <div class="lg:col-span-5 flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar" id="project-list-container">
+            <div class="lg:col-span-7 flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar" id="project-list-container">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="project-list">
                     <!-- Cards injected here -->
                 </div>
@@ -129,7 +132,7 @@
     <script>
         const projects = [
             {
-                shortTitle: "SVG Semantics",
+                shortTitle: "Cohort-based Semantic Labeling - Under Review, VIS 26",
                 progress: "Review",
                 fullTitle: "Cohort-based Semantic Labeling: AI-Enabled Recovery of Visualization Semantics from Deployed SVGs",
                 rq: "How can we recover high-level semantic structures and data encodings from raw, deployed SVGs?",
@@ -140,10 +143,10 @@
                 venue: "IEEE VIS '26"
             },
             {
-                shortTitle: "Agentic Acc",
-                progress: "In Prep",
-                fullTitle: "Agentic Accessibility: A New Paradigm for Graphics Accessibility for BLV",
-                rq: "How can conversational LVLM agents empower BLV users to explore spatial graphics independently?",
+                shortTitle: "Agentic Accessibility for BLV - To be submitted, ASSETS 26",
+                progress: "To be submitted",
+                fullTitle: "Towards Agentic Floorplan Accessibility for Blind and Low-Vision",
+                rq: "How can conversational AI agents enhance BLV users to explore spatial graphics?",
                 methodology: "Interactive framework integrating intent identification and spatial reasoning for floorplans.",
                 category: "Visualization",
                 role: 1,
@@ -151,8 +154,8 @@
                 venue: "ACM ASSETS"
             },
             {
-                shortTitle: "Math Diagrams",
-                progress: "Accepted",
+                shortTitle: "From Text to Visuals - Published, AIED 25",
+                progress: "Published",
                 fullTitle: "From Text to Visuals: Using LLMs to Generate Math Diagrams",
                 rq: "To what extent can LLMs automate pedagogically accurate geometric diagrams from text?",
                 methodology: "Evaluation of LLM-generated TikZ/SVG code against pedagogical benchmarks.",
@@ -162,9 +165,9 @@
                 venue: "AIED 2025"
             },
             {
-                shortTitle: "Carey Bot",
-                progress: "Active",
-                fullTitle: "Carey: AI-driven mental health tools for Alzheimer's caregivers",
+                shortTitle: "Carey - Work in Progress", //✨
+                progress: "Work in Progress",
+                fullTitle: "Carey: AI-driven mental health app for Alzheimer's caregivers",
                 rq: "Can multi-agent AI provide effective cognitive reframing for caregivers facing high burnout?",
                 methodology: "Implementation of agent orchestrator for journaling and CBT-informed venting support.",
                 category: "Mental Health",
@@ -173,8 +176,8 @@
                 venue: "HCI-VIS Lab"
             },
             {
-                shortTitle: "Rupture Study",
-                progress: "Working",
+                shortTitle: "Rupture - To be submitted, IMWUT 26", //✨
+                progress: "To be submitted",
                 fullTitle: "Empirical Alliance Ruptures in Human-AI Therapeutic Dialogues",
                 rq: "What specific conversational patterns characterize breakdowns (ruptures) in AI mental health support?",
                 methodology: "Thematic analysis of multi-turn dialogues validated by clinical psychologists.",
@@ -184,8 +187,8 @@
                 venue: "IMWUT"
             },
             {
-                shortTitle: "RubRIX",
-                progress: "Review",
+                shortTitle: "RubRIX - Under Review, ACL 26", //✨
+                progress: "Under Review",
                 fullTitle: "RubRIX: Rubric-Driven Risk Mitigation in Caregiver-AI Interactions",
                 rq: "How can clinician-validated rubrics mitigate safety risks like epistemic arrogance in AI agents?",
                 methodology: "Risk framework grounded in 'Ethics of Care' and expert-in-the-loop evaluation.",
@@ -195,8 +198,8 @@
                 venue: "ACL"
             },
             {
-                shortTitle: "Gratitude Journal",
-                progress: "Research",
+                shortTitle: "Gratitude Journaling - Work in Progress", //✨
+                progress: "Work in Progress",
                 fullTitle: "Motivations and Engagement Patterns in Digital Gratitude Journaling",
                 rq: "What motivates gratitude practice initiation and how does digital scaffolding sustain it?",
                 methodology: "Qualitative thematic analysis of user motivations and routine behaviors in journaling apps.",
@@ -206,9 +209,9 @@
                 venue: "Mental Health Study"
             },
             {
-                shortTitle: "En3 Sense",
-                progress: "Review",
-                fullTitle: "En3: A Tripartite Approach to Engagement Detection",
+                shortTitle: "Engagement in Educational Video Content - IMWUT Under Review",
+                progress: "Under Review",
+                fullTitle: "En3: A Tripartite Approach Toward Holistic Understanding and Detection of Engagement in Educational Video Content",
                 rq: "How does fusion of EEG, eye-tracking, and EDA signals improve engagement detection?",
                 methodology: "Synchronized multimodal data collection (N=30) and ML fusion analysis.",
                 category: "Sensors",
@@ -217,8 +220,8 @@
                 venue: "IMWUT"
             },
             {
-                shortTitle: "Music Pref",
-                progress: "Ongoing",
+                shortTitle: "Music Preferences - Work in Progress", //✨
+                progress: "Work in Progress",
                 fullTitle: "Music Preference: Sensor-based analysis of user emotional response",
                 rq: "Can physiological markers predict user musical preference before explicit feedback?",
                 methodology: "Real-time analysis using EEG and EmotiBit (EDA, PPG, Temp) during stimuli.",
@@ -249,6 +252,17 @@
                 role: 1,
                 color: "slate",
                 venue: "EuroVis '26 Prep"
+            },
+            {
+                shortTitle: "IoT Edge-Cloud",
+                progress: "Published",
+                fullTitle: "IoT Edge-Cloud: An Internet-of-Things Edge-Empowered Cloud System for Device Management in Smart Spaces",
+                rq: "How can an edge-empowered cloud system optimize the management and visual control of IoT devices in smart spaces?",
+                methodology: "Implementation of an IoT edge-cloud architecture for real-time device control through mobile interfaces.",
+                category: "ETC",
+                role: 2, 
+                color: "slate",
+                venue: "2023 IEEE Network Magazine"
             }
         ];
 
@@ -301,7 +315,7 @@
             // SVG Mini Labels for Domains
             const labelContainer = document.getElementById('svg-labels');
             labelContainer.innerHTML = '';
-            const posMap = { 'Visualization': { x: 70, y: 175 }, 'Mental Health': { x: 300, y: 175 }, 'Sensors': { x: 170, y: 275 } };
+            const posMap = { 'Visualization': { x: 50, y: 165 }, 'Mental Health': { x: 300, y: 165 }, 'Sensors': { x: 120, y: 275 } }; //🔥
 
             Object.keys(posMap).forEach(cat => {
                 const catProjects = projects.filter(p => p.category === cat && (currentAuthorFilter === 'all' || p.role === currentAuthorFilter));
