@@ -57,22 +57,40 @@
             letter-spacing: 0.05em;
             pointer-events: none;
         }
+
+        /* Progress filter button active states */
+        .progress-btn.active-published    { background: #e2ede9; color: #2d6a4f; }
+        .progress-btn.active-review       { background: #ede8dc; color: #7a5c2e; }
+        .progress-btn.active-submitted    { background: #e8e4f0; color: #4c3d7a; }
+        .progress-btn.active-wip          { background: #dce8f0; color: #1e4f6b; }
     </style>
 </head>
 <body class="text-slate-900 h-screen overflow-hidden">
 
     <div id="app" class="h-full flex flex-col p-4 md:p-8 max-w-[1600px] mx-auto">
         <!-- Compact Header -->
-        <header class="w-full mb-6 flex justify-between items-center border-b border-slate-100 pb-4">
+        <header class="w-full mb-6 flex justify-between items-start border-b border-slate-100 pb-4">
             <div>
                 <h1 class="text-2xl font-extrabold tracking-tighter text-slate-900">Human-Computer Interaction, Human-AI Interaction</h1>
                 <p class="text-blue-600 font-bold tracking-widest text-[15px] uppercase">Jasmine Lee • UMass Amherst 2nd year CS PhD Student</p>
             </div>
             
-            <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 scale-90 origin-right">
-                <button onclick="setAuthorFilter('all')" id="btn-all" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-white">All</button>
-                <button onclick="setAuthorFilter(1)" id="btn-1" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">1st Author</button>
-                <button onclick="setAuthorFilter(2)" id="btn-2" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">2nd Author</button>
+            <!-- Filter Controls: stacked vertically -->
+            <div class="flex flex-col items-end gap-2 scale-90 origin-right">
+                <!-- Author Filter -->
+                <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+                    <button onclick="setAuthorFilter('all')" id="btn-all" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-white">All</button>
+                    <button onclick="setAuthorFilter(1)" id="btn-1" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">1st Author</button>
+                    <button onclick="setAuthorFilter(2)" id="btn-2" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">2nd Author</button>
+                </div>
+                <!-- Progress Filter -->
+                <div class="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+                    <button onclick="setProgressFilter('all')" id="pbtn-all" class="progress-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-white">All</button>
+                    <button onclick="setProgressFilter('Published')" id="pbtn-Published" class="progress-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">Published</button>
+                    <button onclick="setProgressFilter('Under Review')" id="pbtn-Under Review" class="progress-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">Under Review</button>
+                    <button onclick="setProgressFilter('To be submitted')" id="pbtn-To be submitted" class="progress-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">To be submitted</button>
+                    <button onclick="setProgressFilter('Work in Progress')" id="pbtn-Work in Progress" class="progress-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900">Work in Progress</button>
+                </div>
             </div>
         </header>
 
@@ -133,7 +151,7 @@
         const projects = [
             {
                 shortTitle: "Cohort-based Semantic Labeling - Under Review, VIS 26",
-                progress: "Review",
+                progress: "Under Review",
                 fullTitle: "Cohort-based Semantic Labeling: AI-Enabled Recovery of Visualization Semantics from Deployed SVGs",
                 rq: "How can we recover high-level semantic structures and data encodings from raw, deployed SVGs?",
                 methodology: "Multi-stage AI pipeline (CSL) that forms element cohorts and interprets roles using grounded LLMs.",
@@ -165,7 +183,7 @@
                 venue: "AIED 2025"
             },
             {
-                shortTitle: "Carey - Work in Progress", //✨
+                shortTitle: "Carey - Work in Progress",
                 progress: "Work in Progress",
                 fullTitle: "Carey: AI-driven mental health app for Alzheimer's caregivers",
                 rq: "Can multi-agent AI provide effective cognitive reframing for caregivers facing high burnout?",
@@ -176,7 +194,7 @@
                 venue: "HCI-VIS Lab"
             },
             {
-                shortTitle: "Rupture - To be submitted, IMWUT 26", //✨
+                shortTitle: "Rupture - To be submitted, IMWUT 26",
                 progress: "To be submitted",
                 fullTitle: "Empirical Alliance Ruptures in Human-AI Therapeutic Dialogues",
                 rq: "What specific conversational patterns characterize breakdowns (ruptures) in AI mental health support?",
@@ -187,7 +205,7 @@
                 venue: "IMWUT"
             },
             {
-                shortTitle: "RubRIX - Under Review, ACL 26", //✨
+                shortTitle: "RubRIX - Under Review, ACL 26",
                 progress: "Under Review",
                 fullTitle: "RubRIX: Rubric-Driven Risk Mitigation in Caregiver-AI Interactions",
                 rq: "How can clinician-validated rubrics mitigate safety risks like epistemic arrogance in AI agents?",
@@ -198,7 +216,7 @@
                 venue: "ACL"
             },
             {
-                shortTitle: "Gratitude Journaling - Work in Progress", //✨
+                shortTitle: "Gratitude Journaling - Work in Progress",
                 progress: "Work in Progress",
                 fullTitle: "Motivations and Engagement Patterns in Digital Gratitude Journaling",
                 rq: "What motivates gratitude practice initiation and how does digital scaffolding sustain it?",
@@ -220,7 +238,7 @@
                 venue: "IMWUT"
             },
             {
-                shortTitle: "Music Preferences - Work in Progress", //✨
+                shortTitle: "Music Preferences - Work in Progress",
                 progress: "Work in Progress",
                 fullTitle: "Music Preference: Sensor-based analysis of user emotional response",
                 rq: "Can physiological markers predict user musical preference before explicit feedback?",
@@ -230,28 +248,27 @@
                 color: "emerald",
                 venue: "Ongoing Research"
             },
-            // Preliminary Studies (Show only when category is 'all')
             {
                 shortTitle: "Decomposition",
-                progress: "Study",
+                progress: "Preliminary Study",
                 fullTitle: "SVG Decomposition for Enhancing LMMs Visualization Comprehension",
                 rq: "Does decomposing SVGs into semantic layers improve the spatial reasoning of LVLMs for floor plans?",
                 methodology: "Comparative benchmarking of PNG and SVG inputs across GPT-4o, Claude 3.7, and Llama 3.2.",
                 category: "Preliminary",
                 role: 1,
                 color: "slate",
-                venue: "Research Study"
+                venue: "Preliminary Study"
             },
             {
                 shortTitle: "Glanceable",
-                progress: "Benchmarking",
+                progress: "Preliminary Study",
                 fullTitle: "Age-Inclusive Trust in AI-Generated Glanceable Health Visualizations",
                 rq: "How do age-dependent cognitive patterns influence trust in AI-curated health data summaries?",
                 methodology: "Benchmarking pipeline and user study comparing younger (20-30) and older (65+) adults.",
                 category: "Preliminary",
                 role: 1,
                 color: "slate",
-                venue: "EuroVis '26 Prep"
+                venue: "Preliminary Study"
             },
             {
                 shortTitle: "IoT Edge-Cloud",
@@ -268,9 +285,24 @@
 
         let currentAuthorFilter = 'all';
         let currentCategory = 'all';
+        let currentProgressFilter = 'all';
+
+        // Progress → color class mapping
+        const progressColorMap = {
+            'Published':        { active: 'active-published', bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200' },
+            'Under Review':     { active: 'active-review',    bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200' },
+            'To be submitted':  { active: 'active-submitted', bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200' },
+            'Work in Progress': { active: 'active-wip',       bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200' },
+            'Preliminary Study':{ active: '',                 bg: 'bg-slate-100', text: 'text-slate-400', border: 'border-slate-200' },
+        };
 
         function setAuthorFilter(role) {
             currentAuthorFilter = role;
+            updateUI();
+        }
+
+        function setProgressFilter(val) {
+            currentProgressFilter = val;
             updateUI();
         }
 
@@ -281,7 +313,7 @@
         }
 
         function updateUI() {
-            // Update Filter Buttons
+            // ── Author Filter Buttons ──────────────────────────────────────
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('bg-slate-900', 'text-white', 'bg-blue-600', 'bg-indigo-600');
                 btn.classList.add('text-slate-500');
@@ -292,7 +324,25 @@
             else if (currentAuthorFilter === 1) activeBtn.classList.add('bg-blue-600', 'text-white');
             else activeBtn.classList.add('bg-indigo-600', 'text-white');
 
-            // Update Venn Shapes
+            // ── Progress Filter Buttons ────────────────────────────────────
+            const progressKeys = ['all', 'Published', 'Under Review', 'To be submitted', 'Work in Progress'];
+            progressKeys.forEach(key => {
+                const btn = document.getElementById(`pbtn-${key}`);
+                if (!btn) return;
+                // reset
+                btn.className = 'progress-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-900';
+                if (key === currentProgressFilter) {
+                    if (key === 'all') {
+                        btn.classList.add('bg-slate-900', 'text-white');
+                        btn.classList.remove('text-slate-500', 'hover:text-slate-900');
+                    } else {
+                        btn.classList.add(progressColorMap[key].active);
+                        btn.classList.remove('text-slate-500', 'hover:text-slate-900');
+                    }
+                }
+            });
+
+            // ── Venn Shapes ────────────────────────────────────────────────
             document.querySelectorAll('.venn-shape').forEach(c => {
                 c.classList.remove('active');
                 if (currentCategory === 'all') c.style.opacity = "0.2";
@@ -303,52 +353,64 @@
                 }
             });
 
-            // Update Preliminary Labels (Only visible in 'all')
+            // ── Preliminary Labels ─────────────────────────────────────────
             const p1 = document.getElementById('prelim-1-label');
             const p2 = document.getElementById('prelim-2-label');
-            if(currentCategory === 'all') {
+            if (currentCategory === 'all') {
                 p1.setAttribute("opacity", "1"); p2.setAttribute("opacity", "1");
             } else {
                 p1.setAttribute("opacity", "0.1"); p2.setAttribute("opacity", "0.1");
             }
 
-            // SVG Mini Labels for Domains
+            // ── SVG Mini Labels ────────────────────────────────────────────
             const labelContainer = document.getElementById('svg-labels');
             labelContainer.innerHTML = '';
-            const posMap = { 'Visualization': { x: 50, y: 165 }, 'Mental Health': { x: 300, y: 165 }, 'Sensors': { x: 120, y: 275 } }; //🔥
+            const posMap = {
+                'Visualization': { x: 50, y: 165 },
+                'Mental Health':  { x: 300, y: 165 },
+                'Sensors':        { x: 120, y: 275 }
+            };
 
             Object.keys(posMap).forEach(cat => {
-                const catProjects = projects.filter(p => p.category === cat && (currentAuthorFilter === 'all' || p.role === currentAuthorFilter));
+                const catProjects = projects.filter(p =>
+                    p.category === cat &&
+                    (currentAuthorFilter === 'all' || p.role === currentAuthorFilter) &&
+                    (currentProgressFilter === 'all' || p.progress === currentProgressFilter)
+                );
                 catProjects.slice(0, 4).forEach((p, i) => {
                     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    text.setAttribute("x", posMap[cat].x); text.setAttribute("y", posMap[cat].y + (i * 10));
-                    text.setAttribute("class", "venn-label-item"); text.textContent = `[${p.shortTitle}]`;
+                    text.setAttribute("x", posMap[cat].x);
+                    text.setAttribute("y", posMap[cat].y + (i * 10));
+                    text.setAttribute("class", "venn-label-item");
+                    text.textContent = `[${p.shortTitle}]`;
                     if (currentCategory !== 'all' && currentCategory !== cat) text.setAttribute("opacity", "0.1");
                     labelContainer.appendChild(text);
                 });
             });
 
-            // Filter Projects for List (Logic: Show 'Preliminary' only when category is 'all')
+            // ── Project Card List ──────────────────────────────────────────
             const filtered = projects.filter(p => {
                 const authorMatch = currentAuthorFilter === 'all' || p.role === currentAuthorFilter;
+
                 let categoryMatch = false;
-                if (currentCategory === 'all') {
-                    categoryMatch = true; // All includes Preliminary
-                } else {
-                    categoryMatch = p.category === currentCategory; // Domain specific excludes Preliminary
-                }
-                return authorMatch && categoryMatch;
+                if (currentCategory === 'all') categoryMatch = true;
+                else categoryMatch = p.category === currentCategory;
+
+                const progressMatch = currentProgressFilter === 'all' || p.progress === currentProgressFilter;
+
+                return authorMatch && categoryMatch && progressMatch;
             });
 
             const listContainer = document.getElementById('project-list');
             listContainer.innerHTML = '';
 
             filtered.forEach(p => {
+                const pc = progressColorMap[p.progress] || progressColorMap['Preliminary Study'];
                 const card = document.createElement('div');
                 card.className = "glass-card p-3 rounded-xl flex flex-col gap-2";
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
-                        <span class="project-tag bg-slate-100 text-slate-500 border border-slate-200">${p.progress}</span>
+                        <span class="project-tag ${pc.bg} ${pc.text} border ${pc.border}">${p.progress}</span>
                         <span class="text-[8px] font-bold text-slate-300 uppercase">${p.role === 1 ? '1st' : '2nd'} Auth</span>
                     </div>
                     <h3 class="text-[11px] font-extrabold text-slate-900 leading-tight">${p.fullTitle}</h3>
