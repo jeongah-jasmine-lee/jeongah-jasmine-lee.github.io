@@ -72,7 +72,7 @@
         <header class="w-full mb-6 flex justify-between items-start border-b border-slate-100 pb-4">
             <div>
                 <h1 class="text-2xl font-extrabold tracking-tighter text-slate-900">Human-Computer Interaction, Human-AI Interaction</h1>
-                <p class="text-blue-600 font-bold tracking-widest text-[15px] uppercase">Jasmine Lee • UMass Amherst 2nd year CS PhD Student</p>
+                <p class="text-blue-600 font-bold tracking-widest text-[15px] uppercase">Jasmine Lee • 2nd year CS PhD Student @ UMass Amherst</p>
             </div>
             
             <!-- Filter Controls: stacked vertically -->
@@ -118,7 +118,7 @@
                         <!-- Titles -->
                         <text x="60" y="145" font-weight="900" font-size="14" fill="#1e40af" class="pointer-events-none tracking-tight">VISUALIZATION</text>
                         <text x="310" y="145" font-weight="900" font-size="14" fill="#9f1239" class="pointer-events-none tracking-tight">MENTAL HEALTH</text>
-                        <text x="210" y="340" font-weight="900" font-size="14" fill="#065f46" class="pointer-events-none tracking-tight">SENSORS</text>
+                        <text x="190" y="310" font-weight="900" font-size="14" fill="#065f46" class="pointer-events-none tracking-tight">BEHAVIOR SENSING</text>
 
                         <g id="svg-labels"></g>
                     </svg>
@@ -154,7 +154,7 @@
                 progress: "Under Review",
                 fullTitle: "Cohort-based Semantic Labeling: AI-Enabled Recovery of Visualization Semantics from Deployed SVGs",
                 rq: "How can we recover high-level semantic structures and data encodings from raw, deployed SVGs?",
-                methodology: "Multi-stage AI pipeline (CSL) that forms element cohorts and interprets roles using grounded LLMs.",
+                methodology: "We propose and evaluate a multi-stage pipeline (CSL) that groups SVG elements into structural cohorts, applies AI-assisted semantic inference, and grounds labels back to primitives, validated on a corpus of 102 SVGs.",
                 category: "Visualization",
                 role: 1,
                 color: "blue",
@@ -164,8 +164,8 @@
                 shortTitle: "Agentic Accessibility for BLV - To be submitted, ASSETS 26",
                 progress: "To be submitted",
                 fullTitle: "Towards Agentic Floorplan Accessibility for Blind and Low-Vision",
-                rq: "How can conversational AI agents enhance BLV users to explore spatial graphics?",
-                methodology: "Interactive framework integrating intent identification and spatial reasoning for floorplans.",
+                rq: "How can conversational agents support effective exploration of complex spatial graphics for blind and low-vision users?",
+                methodology: "We conducted a between-subjects user study (BLV vs. sighted) using a conversational agent prototype with summary-first vs. cold-start interaction modes to analyze exploration behavior and understanding.",
                 category: "Visualization",
                 role: 1,
                 color: "blue",
@@ -175,8 +175,8 @@
                 shortTitle: "From Text to Visuals - Published, AIED 25",
                 progress: "Published",
                 fullTitle: "From Text to Visuals: Using LLMs to Generate Math Diagrams",
-                rq: "To what extent can LLMs automate pedagogically accurate geometric diagrams from text?",
-                methodology: "Evaluation of LLM-generated TikZ/SVG code against pedagogical benchmarks.",
+                rq: "How can LLMs generate accurate and pedagogically effective math diagrams from textual hints using structured representations like SVG?",
+                methodology: "We design an LLM prompting pipeline with in-context learning to generate SVG-based diagrams from text and evaluate them using a VQA-based framework with semantic and syntactic criteria.",
                 category: "Visualization",
                 role: 2,
                 color: "blue",
@@ -185,9 +185,9 @@
             {
                 shortTitle: "Carey - Work in Progress",
                 progress: "Work in Progress",
-                fullTitle: "Carey: AI-driven mental health app for Alzheimer's caregivers",
-                rq: "Can multi-agent AI provide effective cognitive reframing for caregivers facing high burnout?",
-                methodology: "Implementation of agent orchestrator for journaling and CBT-informed venting support.",
+                fullTitle: "Carey: An AI-Powered Multi-Agent System for Supporting Alzheimer’s Caregivers’ Mental Health",
+                rq: "How can a multi-agent conversational system provide safe, personalized, and continuous emotional and informational support for Alzheimer’s caregivers in real-world settings?",
+                methodology: "We design and deploy a multi-agent LLM-based system (journaling, venting, CBT reframing, and RAG-based information support with safeguarding and context management) and evaluate its impact through a 6-week real-world deployment tracking user engagement, behavioral patterns, and well-being indicators.",
                 category: "Mental Health",
                 role: 1,
                 color: "rose",
@@ -196,9 +196,9 @@
             {
                 shortTitle: "Rupture - To be submitted, IMWUT 26",
                 progress: "To be submitted",
-                fullTitle: "Empirical Alliance Ruptures in Human-AI Therapeutic Dialogues",
-                rq: "What specific conversational patterns characterize breakdowns (ruptures) in AI mental health support?",
-                methodology: "Thematic analysis of multi-turn dialogues validated by clinical psychologists.",
+                fullTitle: "Understanding and Designing Rupture Handling in AI Mental Health Conversations",
+                rq: "How accurately do LLMs identify therapeutic alliance ruptures and generate clinically appropriate repair strategies compared to mental health professionals?",
+                methodology: "We conduct a mixed-methods study with mental health professionals using scenario-based evaluations, where clinicians assess LLM rupture identification and repair strategies across conversations, supplemented by qualitative interview insights on alignment and failure patterns.",
                 category: "Mental Health",
                 role: 1,
                 color: "rose",
@@ -208,8 +208,8 @@
                 shortTitle: "RubRIX - Under Review, ACL 26",
                 progress: "Under Review",
                 fullTitle: "RubRIX: Rubric-Driven Risk Mitigation in Caregiver-AI Interactions",
-                rq: "How can clinician-validated rubrics mitigate safety risks like epistemic arrogance in AI agents?",
-                methodology: "Risk framework grounded in 'Ethics of Care' and expert-in-the-loop evaluation.",
+                rq: "How can interactional risks in LLM-generated caregiving responses be systematically characterized and mitigated using a domain-specific evaluation framework?",
+                methodology: "We develop a clinician-validated rubric (RubRIX) grounded in thematic analysis and ethics-of-care theory, evaluate LLM responses on large-scale real-world caregiver datasets (~20K queries), and apply iterative rubric-guided refinement to quantify risk reduction.",
                 category: "Mental Health",
                 role: 2,
                 color: "rose",
@@ -218,11 +218,11 @@
             {
                 shortTitle: "Gratitude Journaling - Work in Progress",
                 progress: "Work in Progress",
-                fullTitle: "Motivations and Engagement Patterns in Digital Gratitude Journaling",
-                rq: "What motivates gratitude practice initiation and how does digital scaffolding sustain it?",
-                methodology: "Qualitative thematic analysis of user motivations and routine behaviors in journaling apps.",
+                fullTitle: "Understanding Gratitude Practices: Motivations, Engagement, and Design Opportunities for Sustained Wellbeing",
+                rq: "How do individuals initiate, sustain, and evolve gratitude practices, and what factors shape their long-term engagement and impact on wellbeing?",
+                methodology: "We conduct a qualitative interview study to identify themes in motivations, routines, benefits, barriers, and longitudinal evolution of gratitude practices, and derive design implications for supportive digital interventions.",
                 category: "Mental Health",
-                role: 1,
+                role: 2,
                 color: "rose",
                 venue: "Mental Health Study"
             },
@@ -230,8 +230,8 @@
                 shortTitle: "Engagement in Educational Video Content - IMWUT Under Review",
                 progress: "Under Review",
                 fullTitle: "En3: A Tripartite Approach Toward Holistic Understanding and Detection of Engagement in Educational Video Content",
-                rq: "How does fusion of EEG, eye-tracking, and EDA signals improve engagement detection?",
-                methodology: "Synchronized multimodal data collection (N=30) and ML fusion analysis.",
+                rq: "How can head-based multimodal sensing (EEG, eye tracking, and EDA) be used to accurately model different dimensions of user engagement in educational video settings?",
+                methodology: "We conduct a mixed-methods study with 30 participants using a head-worn multimodal sensing system, combining physiological data (EEG, eye, EDA), segment-level self-reports, comprehension measures, and semi-structured interviews to evaluate engagement detection and conceptual alignment.",
                 category: "Sensors",
                 role: 2,
                 color: "emerald",
@@ -240,9 +240,9 @@
             {
                 shortTitle: "Music Preferences - Work in Progress",
                 progress: "Work in Progress",
-                fullTitle: "Music Preference: Sensor-based analysis of user emotional response",
-                rq: "Can physiological markers predict user musical preference before explicit feedback?",
-                methodology: "Real-time analysis using EEG and EmotiBit (EDA, PPG, Temp) during stimuli.",
+                fullTitle: "Sensing Music Preference from Physiological Signals: A Multimodal Approach using EEG and EDA",
+                rq: "How can physiological signals (EEG and EDA) be used to infer users’ music preferences and affective responses during listening?",
+                methodology: "We conduct a user study where participants listen to music stimuli while wearing Frenz EEG and EmotiBit EDA sensors, and train multimodal models to predict preference and affect from synchronized physiological signals.",
                 category: "Sensors",
                 role: 2,
                 color: "emerald",
@@ -251,9 +251,9 @@
             {
                 shortTitle: "Decomposition",
                 progress: "Preliminary Study",
-                fullTitle: "SVG Decomposition for Enhancing LMMs Visualization Comprehension",
-                rq: "Does decomposing SVGs into semantic layers improve the spatial reasoning of LVLMs for floor plans?",
-                methodology: "Comparative benchmarking of PNG and SVG inputs across GPT-4o, Claude 3.7, and Llama 3.2.",
+                fullTitle: "SVG Decomposition for Enhancing Large Multimodal Models’ Visualization Comprehension: A Study with Floor Plans",
+                rq: "How does vector-based decomposition (SVG) affect large multimodal models’ ability to understand and reason about spatial visualizations such as floor plans?",
+                methodology: "We conduct an experimental evaluation across 75 floor plans using multiple LMMs (GPT-4o, Claude, Llama) under PNG-only, SVG-only, and combined conditions, measuring performance on spatial understanding and reasoning tasks.",
                 category: "Preliminary",
                 role: 1,
                 color: "slate",
@@ -262,9 +262,9 @@
             {
                 shortTitle: "Glanceable",
                 progress: "Preliminary Study",
-                fullTitle: "Age-Inclusive Trust in AI-Generated Glanceable Health Visualizations",
-                rq: "How do age-dependent cognitive patterns influence trust in AI-curated health data summaries?",
-                methodology: "Benchmarking pipeline and user study comparing younger (20-30) and older (65+) adults.",
+                fullTitle: "Towards an Age-Inclusive Understanding of Trust and Interpretation in AI-Generated Glanceable Health Visualizations",
+                rq: "How do users of different age groups interpret and trust AI-generated glanceable health visualizations on smartwatch interfaces?",
+                methodology: "We conduct a two-stage study combining model-based visualization generation and evaluation with a user study comparing younger and older adults’ interpretation, perception, and trust across selected health visualization scenarios.",
                 category: "Preliminary",
                 role: 1,
                 color: "slate",
@@ -274,8 +274,8 @@
                 shortTitle: "IoT Edge-Cloud",
                 progress: "Published",
                 fullTitle: "IoT Edge-Cloud: An Internet-of-Things Edge-Empowered Cloud System for Device Management in Smart Spaces",
-                rq: "How can an edge-empowered cloud system optimize the management and visual control of IoT devices in smart spaces?",
-                methodology: "Implementation of an IoT edge-cloud architecture for real-time device control through mobile interfaces.",
+                rq: "How can IoT devices be efficiently managed and visually controlled in smart spaces using integrated edge-cloud architectures with location-aware services?",
+                methodology: "We design and implement an IoT edge-cloud system combining DNS-based device naming, indoor localization (PDR + particle filter), and CoAP-based control, and evaluate its performance through a real-world testbed.",
                 category: "ETC",
                 role: 2, 
                 color: "slate",
