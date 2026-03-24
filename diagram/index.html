@@ -113,12 +113,14 @@
                         <!-- Venn Shapes -->
                         <ellipse cx="180" cy="160" rx="150" ry="100" fill="#3b82f6" class="venn-shape" id="shape-Visualization" onclick="toggleCategory('Visualization')" stroke="#2563eb" />
                         <ellipse cx="320" cy="160" rx="150" ry="100" fill="#f43f5e" class="venn-shape" id="shape-Mental-Health" onclick="toggleCategory('Mental Health')" stroke="#e11d48" />
-                        <ellipse cx="250" cy="250" rx="150" ry="100" fill="#10b981" class="venn-shape" id="shape-Sensors" onclick="toggleCategory('Sensors')" stroke="#059669" />
+                        <!-- Sensors ellipse: smaller (rx 150→105, ry 100→72), center shifted slightly up -->
+                        <ellipse cx="250" cy="255" rx="105" ry="72" fill="#10b981" class="venn-shape" id="shape-Sensors" onclick="toggleCategory('Sensors')" stroke="#059669" />
                         
                         <!-- Titles -->
                         <text x="60" y="145" font-weight="900" font-size="14" fill="#1e40af" class="pointer-events-none tracking-tight">VISUALIZATION</text>
                         <text x="310" y="145" font-weight="900" font-size="14" fill="#9f1239" class="pointer-events-none tracking-tight">MENTAL HEALTH</text>
-                        <text x="190" y="310" font-weight="900" font-size="14" fill="#065f46" class="pointer-events-none tracking-tight">BEHAVIOR SENSING</text>
+                        <!-- BEHAVIOR SENSING label: repositioned to stay inside the smaller ellipse -->
+                        <text x="188" y="305" font-weight="900" font-size="12" fill="#065f46" class="pointer-events-none tracking-tight">BEHAVIOR SENSING</text>
 
                         <g id="svg-labels"></g>
                     </svg>
@@ -185,8 +187,8 @@
             {
                 shortTitle: "Carey - Work in Progress",
                 progress: "Work in Progress",
-                fullTitle: "Carey: An AI-Powered Multi-Agent System for Supporting Alzheimer’s Caregivers’ Mental Health",
-                rq: "How can a multi-agent conversational system provide safe, personalized, and continuous emotional and informational support for Alzheimer’s caregivers in real-world settings?",
+                fullTitle: "Carey: An AI-Powered Multi-Agent System for Supporting Alzheimer's Caregivers' Mental Health",
+                rq: "How can a multi-agent conversational system provide safe, personalized, and continuous emotional and informational support for Alzheimer's caregivers in real-world settings?",
                 methodology: "We design and deploy a multi-agent LLM-based system (journaling, venting, CBT reframing, and RAG-based information support with safeguarding and context management) and evaluate its impact through a 6-week real-world deployment tracking user engagement, behavioral patterns, and well-being indicators.",
                 category: "Mental Health",
                 role: 1,
@@ -227,7 +229,7 @@
                 venue: "Mental Health Study"
             },
             {
-                shortTitle: "Engagement in Educational Video Content - IMWUT Under Review",
+                shortTitle: "Engagement - IMWUT Under Review",
                 progress: "Under Review",
                 fullTitle: "En3: A Tripartite Approach Toward Holistic Understanding and Detection of Engagement in Educational Video Content",
                 rq: "How can head-based multimodal sensing (EEG, eye tracking, and EDA) be used to accurately model different dimensions of user engagement in educational video settings?",
@@ -241,7 +243,7 @@
                 shortTitle: "Music Preferences - Work in Progress",
                 progress: "Work in Progress",
                 fullTitle: "Sensing Music Preference from Physiological Signals: A Multimodal Approach using EEG and EDA",
-                rq: "How can physiological signals (EEG and EDA) be used to infer users’ music preferences and affective responses during listening?",
+                rq: "How can physiological signals (EEG and EDA) be used to infer users' music preferences and affective responses during listening?",
                 methodology: "We conduct a user study where participants listen to music stimuli while wearing Frenz EEG and EmotiBit EDA sensors, and train multimodal models to predict preference and affect from synchronized physiological signals.",
                 category: "Sensors",
                 role: 2,
@@ -251,8 +253,8 @@
             {
                 shortTitle: "Decomposition",
                 progress: "Preliminary Study",
-                fullTitle: "SVG Decomposition for Enhancing Large Multimodal Models’ Visualization Comprehension: A Study with Floor Plans",
-                rq: "How does vector-based decomposition (SVG) affect large multimodal models’ ability to understand and reason about spatial visualizations such as floor plans?",
+                fullTitle: "SVG Decomposition for Enhancing Large Multimodal Models' Visualization Comprehension: A Study with Floor Plans",
+                rq: "How does vector-based decomposition (SVG) affect large multimodal models' ability to understand and reason about spatial visualizations such as floor plans?",
                 methodology: "We conduct an experimental evaluation across 75 floor plans using multiple LMMs (GPT-4o, Claude, Llama) under PNG-only, SVG-only, and combined conditions, measuring performance on spatial understanding and reasoning tasks.",
                 category: "Preliminary",
                 role: 1,
@@ -264,7 +266,7 @@
                 progress: "Preliminary Study",
                 fullTitle: "Towards an Age-Inclusive Understanding of Trust and Interpretation in AI-Generated Glanceable Health Visualizations",
                 rq: "How do users of different age groups interpret and trust AI-generated glanceable health visualizations on smartwatch interfaces?",
-                methodology: "We conduct a two-stage study combining model-based visualization generation and evaluation with a user study comparing younger and older adults’ interpretation, perception, and trust across selected health visualization scenarios.",
+                methodology: "We conduct a two-stage study combining model-based visualization generation and evaluation with a user study comparing younger and older adults' interpretation, perception, and trust across selected health visualization scenarios.",
                 category: "Preliminary",
                 role: 1,
                 color: "slate",
@@ -366,9 +368,10 @@
             const labelContainer = document.getElementById('svg-labels');
             labelContainer.innerHTML = '';
             const posMap = {
-                'Visualization': { x: 50, y: 165 },
+                'Visualization': { x: 50,  y: 165 },
                 'Mental Health':  { x: 300, y: 165 },
-                'Sensors':        { x: 120, y: 275 }
+                // Shifted right to stay inside the smaller ellipse (left edge ≈ cx−rx = 145)
+                'Sensors':        { x: 163, y: 268 }
             };
 
             Object.keys(posMap).forEach(cat => {
