@@ -593,6 +593,27 @@ b, strong {
 }
 
 .institution {
-  color: #777;  /* adjust to the shade you prefer */
-  margin-left: 0.5rem; /* optional spacing between the title and institution */
+  color: #777;
+  margin-left: 0.5rem;
+}
+
+.institution a,
+.institution-link {
+  color: #777 !important;
+  text-decoration: none;
+}
+
+.institution a:hover,
+.institution-link:hover {
+  color: #1a3a6b !important;
+  text-decoration: underline;
+}
+
+.institution-icon {
+  height: 1.15em;
+  width: auto;
+  max-width: 5.5em;
+  vertical-align: -0.2em;
+  margin-right: 0.35rem;
+  object-fit: contain;
 }
