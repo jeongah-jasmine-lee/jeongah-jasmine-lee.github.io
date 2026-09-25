@@ -606,6 +606,18 @@ b, strong {
 .institution a:hover,
 .institution-link:hover {
   color: #1a3a6b !important;
+  font-weight: 520;
+  text-decoration: underline;
+}
+
+.author-link {
+  color: inherit !important;
+  text-decoration: none;
+}
+
+.author-link:hover {
+  color: #1a3a6b !important;
+  font-weight: 520;
   text-decoration: underline;
 }
 
